@@ -928,6 +928,14 @@
     }
 
     bootstrap();
+
+    // 把需要被 HTML onclick 呼叫的函式掛到 window（module scope 限制）
+    window.changeMonth = changeMonth;
+    window.addExerciseRow = addExerciseRow;
+    window.removeExerciseRow = removeExerciseRow;
+    window.deleteRecord = deleteRecord;
+    window.closeModal = closeModal;
+    window.saveRecord = saveRecord;
   </script>
 </body>
 </html>
