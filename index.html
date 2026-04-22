@@ -298,6 +298,16 @@
       width: fit-content;
     }
 
+    .preview-box {
+      border: 1px dashed rgba(148, 163, 184, 0.55);
+      background: rgba(15, 23, 42, 0.65);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
     .board-title {
       font-size: 14px;
       font-weight: bold;
@@ -1107,10 +1117,12 @@
         <div class="plan-pill">${monthKey}｜${lockLabel}</div>
         <div class="plan-row">
           <input id="${inputId}" type="text" placeholder="輸入本月要去的日期，例如 2,5,9,16" value="${schedule.days.join(",")}" ${schedule.locked ? "disabled" : ""} />
+          <button class="plan-btn" onclick="previewMonthlyPlan('${personKey}')" ${schedule.locked ? "disabled" : ""}>預覽</button>
           <button class="plan-btn" onclick="saveMonthlyPlan('${personKey}')" ${schedule.locked ? "disabled" : ""}>儲存排程</button>
           <button class="clear-btn" onclick="clearMonthlyPlan('${personKey}')" ${schedule.locked ? "disabled" : ""}>清空</button>
           <button class="lock-btn" onclick="lockMonthlyPlan('${personKey}')" ${schedule.locked ? "disabled" : ""}>鎖定</button>
         </div>
+        <div id="planPreview${personKey === "me" ? "Me" : "Gf"}" class="preview-box">鎖定前可按「預覽」，先看本月預估分數與可能懲罰。</div>
         <div>本月規劃 ${monthResult.planned} 天｜到期 ${monthResult.due} 天｜已出席 ${monthResult.attended} 天｜缺席 ${monthResult.missed} 天｜待出席 ${monthResult.pending} 天</div>
         <div>本月積分：${monthResult.points}（出席 +${SCORE_ON_ATTEND}，缺席 -${SCORE_ON_MISS}）</div>
         <div>累積積分：${totalResult.total}</div>
@@ -1184,6 +1196,34 @@
 
       persistRecords();
       renderCalendars();
+    }
+
+    function getPreviewElementId(personKey) {
+      return personKey === "me" ? "planPreviewMe" : "planPreviewGf";
+    }
+
+    function previewMonthlyPlan(personKey) {
+      const inputId = personKey === "me" ? "planInputMe" : "planInputGf";
+      const previewId = getPreviewElementId(personKey);
+      const input = document.getElementById(inputId);
+      const previewEl = document.getElementById(previewId);
+      if (!input || !previewEl) return;
+
+      const maxDay = getDaysInMonth(currentYear, currentMonth);
+      const parsedDays = parsePlanDaysInput(input.value, maxDay);
+      if (parsedDays === null) {
+        previewEl.textContent = `日期格式錯誤，請輸入 1 到 ${maxDay} 的數字，例如 2,5,9,16`;
+        return;
+      }
+
+      if (!parsedDays.length) {
+        previewEl.textContent = "目前排程是空的，請先輸入至少一天。";
+        return;
+      }
+
+      const monthResult = calculateMonthResult(personKey, currentYear, currentMonth, parsedDays);
+      const monthPenalty = getPenaltyLabel(monthResult.missed);
+      previewEl.textContent = `預覽結果：本月規劃 ${monthResult.planned} 天，到期 ${monthResult.due} 天；目前已出席 ${monthResult.attended}、缺席 ${monthResult.missed}、待出席 ${monthResult.pending}，預估本月積分 ${monthResult.points}。${monthPenalty}`;
     }
 
     function formatMessageTime(isoTime) {
@@ -1468,6 +1508,7 @@
     window.saveMonthlyPlan = saveMonthlyPlan;
     window.clearMonthlyPlan = clearMonthlyPlan;
     window.lockMonthlyPlan = lockMonthlyPlan;
+    window.previewMonthlyPlan = previewMonthlyPlan;
   </script>
 </body>
 </html>
