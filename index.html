@@ -235,6 +235,83 @@
       line-height: 1.6;
     }
 
+    .gamify-box {
+      margin-bottom: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid var(--line);
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .gamify-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .board-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #e2e8f0;
+    }
+
+    .board-list {
+      display: grid;
+      gap: 8px;
+      max-height: 170px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      padding-right: 4px;
+    }
+
+    .board-item {
+      background: rgba(15, 23, 42, 0.74);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      display: grid;
+      gap: 5px;
+    }
+
+    .board-text {
+      color: #f1f5f9;
+      font-size: 13px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .board-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: #94a3b8;
+      font-size: 11px;
+    }
+
+    .board-delete-btn {
+      padding: 4px 8px;
+      font-size: 11px;
+      background: #475569;
+      color: #f8fafc;
+    }
+
+    .board-input-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    .board-btn {
+      background: #0ea5e9;
+      color: white;
+      font-weight: bold;
+    }
+
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -370,6 +447,10 @@
         grid-template-columns: 1fr;
       }
 
+      .board-input-row {
+        grid-template-columns: 1fr;
+      }
+
       .day {
         min-height: 86px;
       }
@@ -397,11 +478,18 @@
           </div>
         </div>
 
+        <div id="gamifyMe" class="gamify-box"></div>
+
         <div class="weekdays" id="weekdaysMe"></div>
         <div class="calendar-grid" id="calendarMe"></div>
 
         <div class="hint-box">
-          藍色區塊是 Jimmy 的紀錄。點任一天可填寫：訓練項目、每組幾下、做幾組、體重、體脂肪、備註。
+          <div class="board-title">Jimmy 留言板</div>
+          <div id="boardListMe" class="board-list"></div>
+          <div class="board-input-row">
+            <input id="boardInputMe" type="text" maxlength="80" placeholder="給 Jimmy 的一句話..." />
+            <button class="board-btn" onclick="addBoardMessage('me')">送出</button>
+          </div>
         </div>
       </div>
 
@@ -418,11 +506,18 @@
           </div>
         </div>
 
+        <div id="gamifyGf" class="gamify-box"></div>
+
         <div class="weekdays" id="weekdaysGf"></div>
         <div class="calendar-grid" id="calendarGf"></div>
 
         <div class="hint-box">
-          粉色區塊是 Celine 的紀錄。資料會同步到 Firebase（若已設定）。
+          <div class="board-title">Celine 留言板</div>
+          <div id="boardListGf" class="board-list"></div>
+          <div class="board-input-row">
+            <input id="boardInputGf" type="text" maxlength="80" placeholder="給 Celine 的一句話..." />
+            <button class="board-btn" onclick="addBoardMessage('girlfriend')">送出</button>
+          </div>
         </div>
       </div>
     </div>
@@ -473,6 +568,7 @@
     const STORAGE_KEY = "fitness-calendar-records-v1";
     const FIREBASE_COLLECTION = "fitnessCalendar";
     const FIREBASE_DOC_ID = "sharedRecords";
+    const BOARD_LIMIT = 20;
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyA4LjlhkQHv20Jxmmm0myvFBD7pBNX8eF0",
       authDomain: "let-s-gym.firebaseapp.com",
@@ -539,7 +635,38 @@
       return {
         me: {},
         girlfriend: {},
+        messageBoard: {
+          me: [],
+          girlfriend: [],
+        },
       };
+    }
+
+    function normalizeBoardItems(items) {
+      if (!Array.isArray(items)) {
+        return [];
+      }
+
+      return items
+        .map(item => {
+          if (typeof item === "string") {
+            return {
+              text: item,
+              time: new Date().toISOString(),
+            };
+          }
+
+          if (!item || typeof item !== "object") {
+            return null;
+          }
+
+          return {
+            text: String(item.text || "").trim(),
+            time: item.time || new Date().toISOString(),
+          };
+        })
+        .filter(item => item && item.text)
+        .slice(-BOARD_LIMIT);
     }
 
     function normalizeRecordsRoot(data) {
@@ -547,9 +674,15 @@
         return createEmptyRootRecords();
       }
 
+      const messageBoardRaw = data.messageBoard && typeof data.messageBoard === "object" ? data.messageBoard : {};
+
       return {
         me: data.me && typeof data.me === "object" ? data.me : {},
         girlfriend: data.girlfriend && typeof data.girlfriend === "object" ? data.girlfriend : {},
+        messageBoard: {
+          me: normalizeBoardItems(messageBoardRaw.me),
+          girlfriend: normalizeBoardItems(messageBoardRaw.girlfriend),
+        },
       };
     }
 
@@ -568,8 +701,10 @@
       return Object.values(FIREBASE_CONFIG).every(Boolean);
     }
 
-    function hasAnyRecords(data) {
-      return Object.keys(data.me || {}).length > 0 || Object.keys(data.girlfriend || {}).length > 0;
+    function hasAnyData(data) {
+      const hasWorkoutRecords = Object.keys(data.me || {}).length > 0 || Object.keys(data.girlfriend || {}).length > 0;
+      const hasMessages = (data.messageBoard?.me?.length || 0) > 0 || (data.messageBoard?.girlfriend?.length || 0) > 0;
+      return hasWorkoutRecords || hasMessages;
     }
 
     function sanitizeRecordsForSave() {
@@ -723,6 +858,172 @@
 
       renderCalendarForPerson("me", "calendarMe", "me");
       renderCalendarForPerson("girlfriend", "calendarGf", "gf");
+      renderGamificationPanel("me", "gamifyMe", "Jimmy");
+      renderGamificationPanel("girlfriend", "gamifyGf", "Celine");
+      renderMessageBoard("me", "boardListMe");
+      renderMessageBoard("girlfriend", "boardListGf");
+    }
+
+    function parseDateKey(dateKey) {
+      const [year, month, day] = dateKey.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function daysBetween(a, b) {
+      const d1 = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+      const d2 = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+      return Math.round((d2 - d1) / 86400000);
+    }
+
+    function hasWorkoutOnEntry(entry) {
+      if (!entry) return false;
+      const normalized = normalizeEntry(entry);
+      return normalized.exercises.some(item => item.name) || !!normalized.note || !!normalized.weight || !!normalized.bodyFat;
+    }
+
+    function getWorkoutDateKeys(personKey) {
+      return Object.keys(records[personKey] || {})
+        .filter(dateKey => hasWorkoutOnEntry(records[personKey][dateKey]))
+        .sort();
+    }
+
+    function getCurrentStreak(dateKeys) {
+      if (!dateKeys.length) return 0;
+
+      const dates = dateKeys.map(parseDateKey);
+      let streak = 1;
+
+      for (let i = dates.length - 1; i > 0; i--) {
+        const diff = daysBetween(dates[i - 1], dates[i]);
+        if (diff === 1) {
+          streak++;
+        } else {
+          break;
+        }
+      }
+
+      return streak;
+    }
+
+    function getTotalSets(personKey) {
+      const entries = Object.values(records[personKey] || {});
+      let total = 0;
+
+      entries.forEach(entry => {
+        const normalized = normalizeEntry(entry);
+        normalized.exercises.forEach(exercise => {
+          const setsNum = Number(exercise.sets);
+          if (Number.isFinite(setsNum) && setsNum > 0) {
+            total += setsNum;
+          }
+        });
+      });
+
+      return total;
+    }
+
+    function getRewardLabel(points) {
+      if (points >= 300) return "獎勵：安排一次約會大餐";
+      if (points >= 180) return "獎勵：休息日電影夜";
+      if (points >= 90) return "獎勵：買一杯喜歡的飲料";
+      return "獎勵：再努力累積到 90 分";
+    }
+
+    function getPenaltyLabel(lastDateKey) {
+      if (!lastDateKey) {
+        return "懲罰提醒：今天至少做 15 分鐘活動";
+      }
+
+      const diffDays = daysBetween(parseDateKey(lastDateKey), new Date());
+      if (diffDays >= 4) return "懲罰提醒：今晚補 30 下徒手深蹲";
+      if (diffDays >= 2) return "懲罰提醒：今天補 10 分鐘快走";
+      return "狀態很棒，維持節奏";
+    }
+
+    function renderGamificationPanel(personKey, containerId, nameLabel) {
+      const box = document.getElementById(containerId);
+      if (!box) return;
+
+      const dateKeys = getWorkoutDateKeys(personKey);
+      const workoutDays = dateKeys.length;
+      const streak = getCurrentStreak(dateKeys);
+      const totalSets = getTotalSets(personKey);
+      const points = workoutDays * 10 + totalSets * 2 + streak * 3;
+      const reward = getRewardLabel(points);
+      const penalty = getPenaltyLabel(dateKeys[dateKeys.length - 1]);
+
+      box.innerHTML = `
+        <div class="gamify-title">${nameLabel} 的獎懲機制</div>
+        <div>積分：${points}（訓練日 ${workoutDays} 天、總組數 ${totalSets}、連續 ${streak} 天）</div>
+        <div>${reward}</div>
+        <div>${penalty}</div>
+      `;
+    }
+
+    function formatMessageTime(isoTime) {
+      const date = new Date(isoTime);
+      if (Number.isNaN(date.getTime())) {
+        return "剛剛";
+      }
+
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      const hh = String(date.getHours()).padStart(2, "0");
+      const min = String(date.getMinutes()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+    }
+
+    function renderMessageBoard(personKey, listId) {
+      const listEl = document.getElementById(listId);
+      if (!listEl) return;
+
+      const messages = records.messageBoard[personKey] || [];
+      if (!messages.length) {
+        listEl.innerHTML = `<div class="board-item"><div class="board-text">目前還沒有留言，來寫第一句吧。</div></div>`;
+        return;
+      }
+
+      listEl.innerHTML = messages
+        .map((item, index) => `
+          <div class="board-item">
+            <div class="board-text">${escapeHtml(item.text)}</div>
+            <div class="board-meta">
+              <span>${escapeHtml(formatMessageTime(item.time))}</span>
+              <button class="board-delete-btn" onclick="removeBoardMessage('${personKey}', ${index})">刪除</button>
+            </div>
+          </div>
+        `)
+        .join("");
+    }
+
+    function addBoardMessage(personKey) {
+      const inputId = personKey === "me" ? "boardInputMe" : "boardInputGf";
+      const input = document.getElementById(inputId);
+      if (!input) return;
+
+      const text = input.value.trim();
+      if (!text) return;
+
+      records.messageBoard[personKey].push({
+        text,
+        time: new Date().toISOString(),
+      });
+
+      records.messageBoard[personKey] = records.messageBoard[personKey].slice(-BOARD_LIMIT);
+      input.value = "";
+      persistRecords();
+      renderCalendars();
+    }
+
+    function removeBoardMessage(personKey, index) {
+      if (!records.messageBoard[personKey] || !records.messageBoard[personKey][index]) {
+        return;
+      }
+
+      records.messageBoard[personKey].splice(index, 1);
+      persistRecords();
+      renderCalendars();
     }
 
     function renderCalendarForPerson(personKey, containerId, styleKey) {
@@ -915,14 +1216,14 @@
         return;
       }
 
-      if (hasAnyRecords(cloudData)) {
+      if (hasAnyData(cloudData)) {
         records = cloudData;
         persistLocalRecords();
         renderCalendars();
         return;
       }
 
-      if (hasAnyRecords(records)) {
+      if (hasAnyData(records)) {
         await syncToCloud();
       }
     }
@@ -936,6 +1237,8 @@
     window.deleteRecord = deleteRecord;
     window.closeModal = closeModal;
     window.saveRecord = saveRecord;
+    window.addBoardMessage = addBoardMessage;
+    window.removeBoardMessage = removeBoardMessage;
   </script>
 </body>
 </html>
