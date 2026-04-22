@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fitness Calendar</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0f172a;
+      --panel: rgba(15, 23, 42, 0.88);
+      --panel-2: rgba(30, 41, 59, 0.92);
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --line: rgba(255, 255, 255, 0.12);
+      --me: #3b82f6;
+      --gf: #ec4899;
+      --accent: #facc15;
+      --day-bg: rgba(255, 255, 255, 0.04);
+      --day-hover: rgba(255, 255, 255, 0.1);
+      --shadow: 0 0 18px rgba(250, 204, 21, 0.15);
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, "Microsoft JhengHei", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(59, 130, 246, 0.18), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.16), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .title-box {
+      text-align: center;
+      margin-bottom: 24px;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 2px solid var(--accent);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .title-box h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+      color: var(--accent);
+    }
+
+    .title-box p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .container {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .section {
+      flex: 1;
+      background: var(--panel);
+      border: 2px solid var(--accent);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .name-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.me {
+      background: var(--me);
+      box-shadow: 0 0 10px var(--me);
+    }
+
+    .dot.gf {
+      background: var(--gf);
+      box-shadow: 0 0 10px var(--gf);
+    }
+
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .month-label {
+      min-width: 110px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .nav-btn {
+      background: var(--accent);
+      color: #111827;
+      font-weight: bold;
+    }
+
+    .nav-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    .weekdays,
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+
+    .weekday {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 6px 0;
+    }
+
+    .day {
+      min-height: 98px;
+      background: var(--day-bg);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 8px;
+      cursor: pointer;
+      position: relative;
+      transition: 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .day:hover {
+      background: var(--day-hover);
+      transform: translateY(-1px);
+    }
+
+    .day.empty {
+      cursor: default;
+      opacity: 0.2;
+    }
+
+    .day.empty:hover {
+      transform: none;
+      background: var(--day-bg);
+    }
+
+    .day-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .day-number {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .record-mark {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .record-mark.me {
+      background: var(--me);
+      box-shadow: 0 0 8px var(--me);
+    }
+
+    .record-mark.gf {
+      background: var(--gf);
+      box-shadow: 0 0 8px var(--gf);
+    }
+
+    .day-preview {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .hint-box {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      z-index: 999;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal {
+      width: min(760px, 100%);
+      background: #111827;
+      border: 2px solid var(--accent);
+      border-radius: 18px;
+      box-shadow: 0 0 24px rgba(0, 0, 0, 0.45);
+      padding: 20px;
+    }
+
+    .modal h2 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      color: var(--accent);
+      font-size: 22px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: #1e293b;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: white;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .exercise-builder {
+      display: grid;
+      gap: 10px;
+    }
+
+    .exercise-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .add-ex-btn,
+    .remove-ex-btn {
+      background: #334155;
+      color: #f8fafc;
+      font-weight: bold;
+      padding: 10px 12px;
+    }
+
+    .add-ex-btn {
+      justify-self: flex-start;
+      background: #2563eb;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    .save-btn {
+      background: #22c55e;
+      color: white;
+      font-weight: bold;
+    }
+
+    .delete-btn {
+      background: #ef4444;
+      color: white;
+      font-weight: bold;
+    }
+
+    .cancel-btn {
+      background: #475569;
+      color: white;
+    }
+
+    .save-btn:hover,
+    .delete-btn:hover,
+    .cancel-btn:hover {
+      filter: brightness(1.08);
+    }
+
+    @media (max-width: 980px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .exercise-row {
+        grid-template-columns: 1fr;
+      }
+
+      .day {
+        min-height: 86px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="title-box">
+      <h1>健身紀錄日曆</h1>
+      <p>Jimmy 和 Celine 的單頁健身網站｜點日期可新增或修改訓練紀錄｜<span id="syncStatus">同步：本機模式</span></p>
+    </div>
+
+    <div class="container">
+      <div class="section">
+        <div class="section-header">
+          <div class="name-tag">
+            <span class="dot me"></span>
+            <span>Jimmy</span>
+          </div>
+          <div class="month-nav">
+            <button class="nav-btn" onclick="changeMonth(-1)">◀</button>
+            <div id="monthLabelMe" class="month-label"></div>
+            <button class="nav-btn" onclick="changeMonth(1)">▶</button>
+          </div>
+        </div>
+
+        <div class="weekdays" id="weekdaysMe"></div>
+        <div class="calendar-grid" id="calendarMe"></div>
+
+        <div class="hint-box">
+          藍色區塊是 Jimmy 的紀錄。點任一天可填寫：訓練項目、每組幾下、做幾組、體重、體脂肪、備註。
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <div class="name-tag">
+            <span class="dot gf"></span>
+            <span>Celine</span>
+          </div>
+          <div class="month-nav">
+            <button class="nav-btn" onclick="changeMonth(-1)">◀</button>
+            <div id="monthLabelGf" class="month-label"></div>
+            <button class="nav-btn" onclick="changeMonth(1)">▶</button>
+          </div>
+        </div>
+
+        <div class="weekdays" id="weekdaysGf"></div>
+        <div class="calendar-grid" id="calendarGf"></div>
+
+        <div class="hint-box">
+          粉色區塊是 Celine 的紀錄。資料會同步到 Firebase（若已設定）。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <h2 id="modalTitle">訓練紀錄</h2>
+
+      <div class="form-group">
+        <label>訓練項目</label>
+        <div class="exercise-builder">
+          <div id="exerciseRows"></div>
+          <button type="button" class="add-ex-btn" onclick="addExerciseRow()">+ 新增訓練</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="weight">體重 (kg)</label>
+          <input id="weight" type="text" placeholder="例如：65.2" />
+        </div>
+
+        <div class="form-group">
+          <label for="bodyFat">體脂肪 (%)</label>
+          <input id="bodyFat" type="text" placeholder="例如：22.8" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="note">備註</label>
+        <textarea id="note" placeholder="今天狀態、飲食、感受..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="delete-btn" onclick="deleteRecord()">刪除</button>
+        <button class="cancel-btn" onclick="closeModal()">取消</button>
+        <button class="save-btn" onclick="saveRecord()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    const weekLabels = ["日", "一", "二", "三", "四", "五", "六"];
+    const STORAGE_KEY = "fitness-calendar-records-v1";
+    const FIREBASE_COLLECTION = "fitnessCalendar";
+    const FIREBASE_DOC_ID = "sharedRecords";
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyA4LjlhkQHv20Jxmmm0myvFBD7pBNX8eF0",
+      authDomain: "let-s-gym.firebaseapp.com",
+      projectId: "let-s-gym",
+      storageBucket: "let-s-gym.firebasestorage.app",
+      messagingSenderId: "11716782851",
+      appId: "1:11716782851:web:04de6c31587eb79e241736",
+    };
+    const EXERCISE_OPTIONS = [
+      "槓鈴深蹲",
+      "前蹲舉",
+      "腿推",
+      "硬舉",
+      "羅馬尼亞硬舉",
+      "臀推",
+      "弓箭步",
+      "臥推",
+      "上斜臥推",
+      "啞鈴飛鳥",
+      "伏地挺身",
+      "肩推",
+      "側平舉",
+      "後三角飛鳥",
+      "引體向上",
+      "高位下拉",
+      "槓鈴划船",
+      "坐姿划船",
+      "二頭彎舉",
+      "三頭下壓",
+      "腹肌滾輪",
+      "棒式",
+      "跑步",
+      "飛輪",
+      "划步機"
+    ];
+
+    let db = null;
+    let cloudDocRef = null;
+    let isCloudEnabled = false;
+    let isCloudLoaded = false;
+
+    let currentDate = new Date();
+    let currentYear = currentDate.getFullYear();
+    let currentMonth = currentDate.getMonth();
+
+    let currentEditing = {
+      person: null,
+      dateKey: null,
+    };
+
+    let records = loadLocalRecords();
+
+    function loadLocalRecords() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try {
+          return normalizeRecordsRoot(JSON.parse(raw));
+        } catch (e) {}
+      }
+      return createEmptyRootRecords();
+    }
+
+    function createEmptyRootRecords() {
+      return {
+        me: {},
+        girlfriend: {},
+      };
+    }
+
+    function normalizeRecordsRoot(data) {
+      if (!data || typeof data !== "object") {
+        return createEmptyRootRecords();
+      }
+
+      return {
+        me: data.me && typeof data.me === "object" ? data.me : {},
+        girlfriend: data.girlfriend && typeof data.girlfriend === "object" ? data.girlfriend : {},
+      };
+    }
+
+    function persistLocalRecords() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function updateSyncStatus(text) {
+      const statusEl = document.getElementById("syncStatus");
+      if (statusEl) {
+        statusEl.textContent = text;
+      }
+    }
+
+    function hasCloudConfig() {
+      return Object.values(FIREBASE_CONFIG).every(Boolean);
+    }
+
+    function hasAnyRecords(data) {
+      return Object.keys(data.me || {}).length > 0 || Object.keys(data.girlfriend || {}).length > 0;
+    }
+
+    function sanitizeRecordsForSave() {
+      return normalizeRecordsRoot(records);
+    }
+
+    async function initFirebaseSync() {
+      if (!hasCloudConfig()) {
+        updateSyncStatus("同步：本機模式（請填 Firebase 設定）");
+        return;
+      }
+
+      try {
+        const app = initializeApp(FIREBASE_CONFIG);
+        db = getFirestore(app);
+        cloudDocRef = doc(db, FIREBASE_COLLECTION, FIREBASE_DOC_ID);
+        isCloudEnabled = true;
+        updateSyncStatus("同步：連線中...");
+      } catch (error) {
+        updateSyncStatus("同步：Firebase 初始化失敗");
+      }
+    }
+
+    async function loadCloudRecords() {
+      if (!isCloudEnabled || !cloudDocRef) {
+        return null;
+      }
+
+      try {
+        const snapshot = await getDoc(cloudDocRef);
+        if (!snapshot.exists()) {
+          isCloudLoaded = true;
+          updateSyncStatus("同步：雲端已連線（首次資料）");
+          return createEmptyRootRecords();
+        }
+
+        const data = normalizeRecordsRoot(snapshot.data());
+        isCloudLoaded = true;
+        updateSyncStatus("同步：雲端已連線");
+        return data;
+      } catch (error) {
+        updateSyncStatus("同步：讀取雲端失敗，使用本機");
+        return null;
+      }
+    }
+
+    async function syncToCloud() {
+      if (!isCloudEnabled || !cloudDocRef || !isCloudLoaded) {
+        return;
+      }
+
+      try {
+        await setDoc(cloudDocRef, sanitizeRecordsForSave());
+        updateSyncStatus("同步：已更新到雲端");
+      } catch (error) {
+        updateSyncStatus("同步：寫入雲端失敗（已保留本機）");
+      }
+    }
+
+    function persistRecords() {
+      persistLocalRecords();
+      syncToCloud();
+    }
+
+    function formatMonthLabel(year, month) {
+      return `${year} 年 ${month + 1} 月`;
+    }
+
+    function formatDateKey(year, month, day) {
+      const mm = String(month + 1).padStart(2, "0");
+      const dd = String(day).padStart(2, "0");
+      return `${year}-${mm}-${dd}`;
+    }
+
+    function createEmptyExercise() {
+      return {
+        name: "",
+        reps: "",
+        sets: "",
+      };
+    }
+
+    function normalizeEntry(entry) {
+      if (!entry) {
+        return {
+          exercises: [createEmptyExercise()],
+          weight: "",
+          bodyFat: "",
+          note: "",
+        };
+      }
+
+      const hasExercises = Array.isArray(entry.exercises);
+      const exercises = hasExercises
+        ? entry.exercises.map(item => ({
+            name: item.name || "",
+            reps: item.reps || "",
+            sets: item.sets || "",
+          }))
+        : [{
+            name: entry.training || "",
+            reps: "",
+            sets: entry.sets || "",
+          }];
+
+      return {
+        exercises: exercises.length ? exercises : [createEmptyExercise()],
+        weight: entry.weight || "",
+        bodyFat: entry.bodyFat || "",
+        note: entry.note || "",
+      };
+    }
+
+    function getPreviewTraining(entry) {
+      const normalized = normalizeEntry(entry);
+      const valid = normalized.exercises.filter(item => item.name);
+
+      if (!valid.length) {
+        return "";
+      }
+
+      const first = valid[0];
+      const firstLine = `${first.name}${first.sets ? ` ${first.sets}組` : ""}${first.reps ? ` x ${first.reps}下` : ""}`;
+      const suffix = valid.length > 1 ? ` +${valid.length - 1}` : "";
+      return (firstLine + suffix).slice(0, 24);
+    }
+
+    function renderWeekdays() {
+      const weekdaysMe = document.getElementById("weekdaysMe");
+      const weekdaysGf = document.getElementById("weekdaysGf");
+
+      weekdaysMe.innerHTML = "";
+      weekdaysGf.innerHTML = "";
+
+      weekLabels.forEach(label => {
+        const el1 = document.createElement("div");
+        el1.className = "weekday";
+        el1.textContent = label;
+        weekdaysMe.appendChild(el1);
+
+        const el2 = document.createElement("div");
+        el2.className = "weekday";
+        el2.textContent = label;
+        weekdaysGf.appendChild(el2);
+      });
+    }
+
+    function renderCalendars() {
+      document.getElementById("monthLabelMe").textContent = formatMonthLabel(currentYear, currentMonth);
+      document.getElementById("monthLabelGf").textContent = formatMonthLabel(currentYear, currentMonth);
+
+      renderCalendarForPerson("me", "calendarMe", "me");
+      renderCalendarForPerson("girlfriend", "calendarGf", "gf");
+    }
+
+    function renderCalendarForPerson(personKey, containerId, styleKey) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+
+      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+
+      for (let i = 0; i < totalCells; i++) {
+        const dayNumber = i - firstDay + 1;
+        const cell = document.createElement("div");
+
+        if (dayNumber < 1 || dayNumber > daysInMonth) {
+          cell.className = "day empty";
+          container.appendChild(cell);
+          continue;
+        }
+
+        const dateKey = formatDateKey(currentYear, currentMonth, dayNumber);
+        const entry = records[personKey][dateKey];
+
+        cell.className = "day";
+        cell.onclick = () => openModal(personKey, dateKey);
+
+        const previewTraining = entry ? getPreviewTraining(entry) : "";
+        const previewWeight = entry && entry.weight ? `${entry.weight} kg` : "";
+
+        cell.innerHTML = `
+          <div class="day-top">
+            <div class="day-number">${dayNumber}</div>
+            ${entry ? `<div class="record-mark ${styleKey}"></div>` : ""}
+          </div>
+          <div class="day-preview">
+            ${previewTraining ? `<div>${escapeHtml(previewTraining)}</div>` : ""}
+            ${previewWeight ? `<div>${escapeHtml(previewWeight)}</div>` : ""}
+          </div>
+        `;
+
+        container.appendChild(cell);
+      }
+    }
+
+    function buildExerciseOptionsHtml(selectedName) {
+      const defaultOption = '<option value="">請選擇訓練</option>';
+      const options = EXERCISE_OPTIONS.map(item => {
+        const selected = item === selectedName ? "selected" : "";
+        return `<option value="${escapeHtml(item)}" ${selected}>${escapeHtml(item)}</option>`;
+      }).join("");
+
+      return defaultOption + options;
+    }
+
+    function collectExercisesFromForm() {
+      const rows = document.querySelectorAll("#exerciseRows .exercise-row");
+      return Array.from(rows).map(row => ({
+        name: row.querySelector(".exercise-name").value.trim(),
+        reps: row.querySelector(".exercise-reps").value.trim(),
+        sets: row.querySelector(".exercise-sets").value.trim(),
+      }));
+    }
+
+    function renderExerciseRows(exercises) {
+      const rowsContainer = document.getElementById("exerciseRows");
+      rowsContainer.innerHTML = "";
+
+      exercises.forEach(exercise => {
+        const row = document.createElement("div");
+        row.className = "exercise-row";
+        row.innerHTML = `
+          <select class="exercise-name">${buildExerciseOptionsHtml(exercise.name)}</select>
+          <input class="exercise-reps" type="number" min="1" step="1" placeholder="每組幾下" value="${escapeHtml(exercise.reps)}" />
+          <input class="exercise-sets" type="number" min="1" step="1" placeholder="幾組" value="${escapeHtml(exercise.sets)}" />
+          <button type="button" class="remove-ex-btn" onclick="removeExerciseRow(this)">刪除</button>
+        `;
+        rowsContainer.appendChild(row);
+      });
+    }
+
+    function addExerciseRow() {
+      const current = collectExercisesFromForm();
+      current.push(createEmptyExercise());
+      renderExerciseRows(current);
+    }
+
+    function removeExerciseRow(buttonEl) {
+      const rowsContainer = document.getElementById("exerciseRows");
+      const rows = rowsContainer.querySelectorAll(".exercise-row");
+
+      if (rows.length <= 1) {
+        renderExerciseRows([createEmptyExercise()]);
+        return;
+      }
+
+      const row = buttonEl.closest(".exercise-row");
+      if (row) {
+        row.remove();
+      }
+    }
+
+    function openModal(person, dateKey) {
+      currentEditing.person = person;
+      currentEditing.dateKey = dateKey;
+
+      const personLabel = person === "me" ? "Jimmy" : "Celine";
+      document.getElementById("modalTitle").textContent = `${personLabel}｜${dateKey}｜訓練紀錄`;
+
+      const entry = normalizeEntry(records[person][dateKey]);
+      renderExerciseRows(entry.exercises);
+      document.getElementById("weight").value = entry.weight;
+      document.getElementById("bodyFat").value = entry.bodyFat;
+      document.getElementById("note").value = entry.note;
+
+      document.getElementById("modalBackdrop").classList.add("show");
+    }
+
+    function closeModal() {
+      document.getElementById("modalBackdrop").classList.remove("show");
+      currentEditing.person = null;
+      currentEditing.dateKey = null;
+    }
+
+    function saveRecord() {
+      const { person, dateKey } = currentEditing;
+      if (!person || !dateKey) return;
+
+      records[person][dateKey] = {
+        exercises: collectExercisesFromForm(),
+        weight: document.getElementById("weight").value.trim(),
+        bodyFat: document.getElementById("bodyFat").value.trim(),
+        note: document.getElementById("note").value.trim(),
+      };
+
+      persistRecords();
+      renderCalendars();
+      closeModal();
+    }
+
+    function deleteRecord() {
+      const { person, dateKey } = currentEditing;
+      if (!person || !dateKey) return;
+
+      if (records[person][dateKey]) {
+        delete records[person][dateKey];
+        persistRecords();
+      }
+
+      renderCalendars();
+      closeModal();
+    }
+
+    function changeMonth(diff) {
+      currentMonth += diff;
+
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      } else if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+
+      renderCalendars();
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    document.getElementById("modalBackdrop").addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+
+    async function bootstrap() {
+      renderWeekdays();
+      renderCalendars();
+
+      await initFirebaseSync();
+      const cloudData = await loadCloudRecords();
+
+      if (!cloudData) {
+        return;
+      }
+
+      if (hasAnyRecords(cloudData)) {
+        records = cloudData;
+        persistLocalRecords();
+        renderCalendars();
+        return;
+      }
+
+      if (hasAnyRecords(records)) {
+        await syncToCloud();
+      }
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
