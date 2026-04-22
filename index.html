@@ -629,8 +629,6 @@
     const FIREBASE_COLLECTION = "fitnessCalendar";
     const FIREBASE_DOC_ID = "sharedRecords";
     const BOARD_LIMIT = 20;
-    const SCORE_ON_ATTEND = 10;
-    const SCORE_ON_MISS = 8;
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyA4LjlhkQHv20Jxmmm0myvFBD7pBNX8eF0",
       authDomain: "let-s-gym.firebaseapp.com",
@@ -701,52 +699,7 @@
           me: [],
           girlfriend: [],
         },
-        schedules: {
-          me: {},
-          girlfriend: {},
-        },
       };
-    }
-
-    function normalizeScheduleDays(days, maxDay) {
-      if (!Array.isArray(days)) {
-        return [];
-      }
-
-      const validDays = days
-        .map(item => Number(item))
-        .filter(day => Number.isInteger(day) && day >= 1 && day <= maxDay);
-
-      return Array.from(new Set(validDays)).sort((a, b) => a - b);
-    }
-
-    function normalizeScheduleMap(scheduleMapRaw) {
-      if (!scheduleMapRaw || typeof scheduleMapRaw !== "object") {
-        return {};
-      }
-
-      const result = {};
-      Object.keys(scheduleMapRaw).forEach(monthKey => {
-        const item = scheduleMapRaw[monthKey];
-        if (!item || typeof item !== "object") {
-          return;
-        }
-
-        const [yearText, monthText] = monthKey.split("-");
-        const year = Number(yearText);
-        const month = Number(monthText);
-        if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
-          return;
-        }
-
-        const maxDay = new Date(year, month, 0).getDate();
-        result[monthKey] = {
-          days: normalizeScheduleDays(item.days, maxDay),
-          locked: Boolean(item.locked),
-        };
-      });
-
-      return result;
     }
 
     function normalizeBoardItems(items) {
@@ -782,18 +735,12 @@
       }
 
       const messageBoardRaw = data.messageBoard && typeof data.messageBoard === "object" ? data.messageBoard : {};
-      const schedulesRaw = data.schedules && typeof data.schedules === "object" ? data.schedules : {};
-
       return {
         me: data.me && typeof data.me === "object" ? data.me : {},
         girlfriend: data.girlfriend && typeof data.girlfriend === "object" ? data.girlfriend : {},
         messageBoard: {
           me: normalizeBoardItems(messageBoardRaw.me),
           girlfriend: normalizeBoardItems(messageBoardRaw.girlfriend),
-        },
-        schedules: {
-          me: normalizeScheduleMap(schedulesRaw.me),
-          girlfriend: normalizeScheduleMap(schedulesRaw.girlfriend),
         },
       };
     }
@@ -816,8 +763,7 @@
     function hasAnyData(data) {
       const hasWorkoutRecords = Object.keys(data.me || {}).length > 0 || Object.keys(data.girlfriend || {}).length > 0;
       const hasMessages = (data.messageBoard?.me?.length || 0) > 0 || (data.messageBoard?.girlfriend?.length || 0) > 0;
-      const hasSchedules = Object.keys(data.schedules?.me || {}).length > 0 || Object.keys(data.schedules?.girlfriend || {}).length > 0;
-      return hasWorkoutRecords || hasMessages || hasSchedules;
+      return hasWorkoutRecords || hasMessages;
     }
 
     function sanitizeRecordsForSave() {
@@ -977,253 +923,44 @@
       renderMessageBoard("girlfriend", "boardListGf");
     }
 
-    function parseDateKey(dateKey) {
-      const [year, month, day] = dateKey.split("-").map(Number);
-      return new Date(year, month - 1, day);
-    }
-
-    function daysBetween(a, b) {
-      const d1 = new Date(a.getFullYear(), a.getMonth(), a.getDate());
-      const d2 = new Date(b.getFullYear(), b.getMonth(), b.getDate());
-      return Math.round((d2 - d1) / 86400000);
-    }
-
     function hasWorkoutOnEntry(entry) {
       if (!entry) return false;
       const normalized = normalizeEntry(entry);
       return normalized.exercises.some(item => item.name) || !!normalized.note || !!normalized.weight || !!normalized.bodyFat;
     }
 
-    function getMonthKey(year, monthZeroBased) {
-      return `${year}-${String(monthZeroBased + 1).padStart(2, "0")}`;
+    function getWorkoutDateKeys(personKey) {
+      return Object.keys(records[personKey] || {})
+        .filter(dateKey => hasWorkoutOnEntry(records[personKey][dateKey]))
+        .sort();
     }
 
-    function getDaysInMonth(year, monthZeroBased) {
-      return new Date(year, monthZeroBased + 1, 0).getDate();
+    function getMonthWorkoutCount(personKey, year, monthZeroBased) {
+      const prefix = `${year}-${String(monthZeroBased + 1).padStart(2, "0")}-`;
+      return getWorkoutDateKeys(personKey).filter(dateKey => dateKey.startsWith(prefix)).length;
     }
 
-    function getCurrentMonthSchedule(personKey, year, monthZeroBased) {
-      const monthKey = getMonthKey(year, monthZeroBased);
-      const schedule = records.schedules[personKey][monthKey];
-      if (!schedule) {
-        return {
-          monthKey,
-          days: [],
-          locked: false,
-        };
-      }
-
-      return {
-        monthKey,
-        days: schedule.days || [],
-        locked: Boolean(schedule.locked),
-      };
-    }
-
-    function parsePlanDaysInput(inputValue, maxDay) {
-      const text = inputValue.trim();
-      if (!text) {
-        return [];
-      }
-
-      const segments = text.split(/[，,\s]+/).filter(Boolean);
-      const parsed = segments.map(item => Number(item));
-
-      if (parsed.some(day => !Number.isInteger(day) || day < 1 || day > maxDay)) {
-        return null;
-      }
-
-      return Array.from(new Set(parsed)).sort((a, b) => a - b);
-    }
-
-    function hasWorkoutOnDate(personKey, year, monthZeroBased, day) {
-      const dateKey = formatDateKey(year, monthZeroBased, day);
-      return hasWorkoutOnEntry(records[personKey][dateKey]);
-    }
-
-    function calculateMonthResult(personKey, year, monthZeroBased, scheduleDays) {
-      const now = new Date();
-      const scheduleDates = scheduleDays.map(day => new Date(year, monthZeroBased, day));
-      const dueDays = scheduleDates.filter(date => daysBetween(date, now) >= 0).map(date => date.getDate());
-
-      let attended = 0;
-      let missed = 0;
-
-      dueDays.forEach(day => {
-        if (hasWorkoutOnDate(personKey, year, monthZeroBased, day)) {
-          attended++;
-        } else {
-          missed++;
-        }
-      });
-
-      return {
-        planned: scheduleDays.length,
-        due: dueDays.length,
-        attended,
-        missed,
-        pending: Math.max(scheduleDays.length - dueDays.length, 0),
-        points: attended * SCORE_ON_ATTEND - missed * SCORE_ON_MISS,
-      };
-    }
-
-    function calculateTotalPoints(personKey) {
-      const schedules = records.schedules[personKey] || {};
-      let total = 0;
-      let totalMissed = 0;
-
-      Object.keys(schedules).forEach(monthKey => {
-        const [yearText, monthText] = monthKey.split("-");
-        const year = Number(yearText);
-        const monthZeroBased = Number(monthText) - 1;
-        if (!Number.isInteger(year) || !Number.isInteger(monthZeroBased)) return;
-
-        const result = calculateMonthResult(personKey, year, monthZeroBased, schedules[monthKey].days || []);
-        total += result.points;
-        totalMissed += result.missed;
-      });
-
-      return { total, totalMissed };
-    }
-
-    function getRewardLabel(totalPoints) {
-      if (totalPoints >= 220) return "獎勵：安排一個完整放鬆日";
-      if (totalPoints >= 120) return "獎勵：約會晚餐或甜點";
-      if (totalPoints >= 60) return "獎勵：小禮物或飲料";
-      return "獎勵目標：累積到 60 分先解鎖第一階段";
-    }
-
-    function getPenaltyLabel(missedCount) {
-      if (missedCount >= 6) return "懲罰建議：本週加做 2 次 20 分鐘有氧";
-      if (missedCount >= 3) return "懲罰建議：每缺席 1 次補 15 分鐘快走";
-      if (missedCount >= 1) return "懲罰建議：今晚補 30 下徒手深蹲";
-      return "懲罰狀態：本月目前零缺席";
+    function getRewardLabel(points) {
+      if (points >= 60) return "獎勵：很穩定，安排一次放鬆約會日";
+      if (points >= 30) return "獎勵：維持中，來個小小犒賞";
+      if (points >= 10) return "獎勵：起步很棒，繼續累積";
+      return "獎勵：先從第一個 +1 開始";
     }
 
     function renderGamificationPanel(personKey, containerId, nameLabel) {
       const box = document.getElementById(containerId);
       if (!box) return;
 
-      const monthKey = getMonthKey(currentYear, currentMonth);
-      const schedule = getCurrentMonthSchedule(personKey, currentYear, currentMonth);
-      const monthResult = calculateMonthResult(personKey, currentYear, currentMonth, schedule.days);
-      const totalResult = calculateTotalPoints(personKey);
-
-      const inputId = personKey === "me" ? "planInputMe" : "planInputGf";
-      const lockLabel = schedule.locked ? "本月排程已鎖定" : "本月排程尚未鎖定";
+      const totalPoints = getWorkoutDateKeys(personKey).length;
+      const monthPoints = getMonthWorkoutCount(personKey, currentYear, currentMonth);
 
       box.innerHTML = `
-        <div class="gamify-title">${nameLabel} 的月排程獎懲制度</div>
-        <div class="plan-pill">${monthKey}｜${lockLabel}</div>
-        <div class="plan-row">
-          <input id="${inputId}" type="text" placeholder="輸入本月要去的日期，例如 2,5,9,16" value="${schedule.days.join(",")}" ${schedule.locked ? "disabled" : ""} />
-          <button class="plan-btn" onclick="previewMonthlyPlan('${personKey}')" ${schedule.locked ? "disabled" : ""}>預覽</button>
-          <button class="plan-btn" onclick="saveMonthlyPlan('${personKey}')" ${schedule.locked ? "disabled" : ""}>儲存排程</button>
-          <button class="clear-btn" onclick="clearMonthlyPlan('${personKey}')" ${schedule.locked ? "disabled" : ""}>清空</button>
-          <button class="lock-btn" onclick="lockMonthlyPlan('${personKey}')" ${schedule.locked ? "disabled" : ""}>鎖定</button>
-        </div>
-        <div id="planPreview${personKey === "me" ? "Me" : "Gf"}" class="preview-box">鎖定前可按「預覽」，先看本月預估分數與可能懲罰。</div>
-        <div>本月規劃 ${monthResult.planned} 天｜到期 ${monthResult.due} 天｜已出席 ${monthResult.attended} 天｜缺席 ${monthResult.missed} 天｜待出席 ${monthResult.pending} 天</div>
-        <div>本月積分：${monthResult.points}（出席 +${SCORE_ON_ATTEND}，缺席 -${SCORE_ON_MISS}）</div>
-        <div>累積積分：${totalResult.total}</div>
-        <div>${getRewardLabel(totalResult.total)}</div>
-        <div>${getPenaltyLabel(totalResult.totalMissed)}</div>
+        <div class="gamify-title">${nameLabel} 的積分紀錄</div>
+        <div>計分規則：有去健身房一次就 +1 分</div>
+        <div>本月積分：${monthPoints}</div>
+        <div>累積積分：${totalPoints}</div>
+        <div>${getRewardLabel(totalPoints)}</div>
       `;
-    }
-
-    function saveMonthlyPlan(personKey) {
-      const inputId = personKey === "me" ? "planInputMe" : "planInputGf";
-      const input = document.getElementById(inputId);
-      if (!input) return;
-
-      const monthKey = getMonthKey(currentYear, currentMonth);
-      const existing = records.schedules[personKey][monthKey];
-      if (existing && existing.locked) {
-        alert("這個月排程已鎖定，不能修改。可以切到下個月安排新的計畫。");
-        return;
-      }
-
-      const maxDay = getDaysInMonth(currentYear, currentMonth);
-      const parsedDays = parsePlanDaysInput(input.value, maxDay);
-      if (parsedDays === null) {
-        alert(`日期格式錯誤，請輸入 1 到 ${maxDay} 的數字，例如 2,5,9,16`);
-        return;
-      }
-
-      records.schedules[personKey][monthKey] = {
-        days: parsedDays,
-        locked: false,
-      };
-
-      persistRecords();
-      renderCalendars();
-    }
-
-    function clearMonthlyPlan(personKey) {
-      const monthKey = getMonthKey(currentYear, currentMonth);
-      const existing = records.schedules[personKey][monthKey];
-      if (existing && existing.locked) {
-        alert("這個月排程已鎖定，不能清空。可以安排下個月。 ");
-        return;
-      }
-
-      records.schedules[personKey][monthKey] = {
-        days: [],
-        locked: false,
-      };
-
-      persistRecords();
-      renderCalendars();
-    }
-
-    function lockMonthlyPlan(personKey) {
-      const monthKey = getMonthKey(currentYear, currentMonth);
-      const existing = records.schedules[personKey][monthKey];
-      if (existing && existing.locked) {
-        return;
-      }
-
-      const days = existing?.days || [];
-      if (!days.length) {
-        alert("請先設定本月至少一天的健身日期，再鎖定排程。");
-        return;
-      }
-
-      records.schedules[personKey][monthKey] = {
-        days,
-        locked: true,
-      };
-
-      persistRecords();
-      renderCalendars();
-    }
-
-    function getPreviewElementId(personKey) {
-      return personKey === "me" ? "planPreviewMe" : "planPreviewGf";
-    }
-
-    function previewMonthlyPlan(personKey) {
-      const inputId = personKey === "me" ? "planInputMe" : "planInputGf";
-      const previewId = getPreviewElementId(personKey);
-      const input = document.getElementById(inputId);
-      const previewEl = document.getElementById(previewId);
-      if (!input || !previewEl) return;
-
-      const maxDay = getDaysInMonth(currentYear, currentMonth);
-      const parsedDays = parsePlanDaysInput(input.value, maxDay);
-      if (parsedDays === null) {
-        previewEl.textContent = `日期格式錯誤，請輸入 1 到 ${maxDay} 的數字，例如 2,5,9,16`;
-        return;
-      }
-
-      if (!parsedDays.length) {
-        previewEl.textContent = "目前排程是空的，請先輸入至少一天。";
-        return;
-      }
-
-      const monthResult = calculateMonthResult(personKey, currentYear, currentMonth, parsedDays);
-      const monthPenalty = getPenaltyLabel(monthResult.missed);
-      previewEl.textContent = `預覽結果：本月規劃 ${monthResult.planned} 天，到期 ${monthResult.due} 天；目前已出席 ${monthResult.attended}、缺席 ${monthResult.missed}、待出席 ${monthResult.pending}，預估本月積分 ${monthResult.points}。${monthPenalty}`;
     }
 
     function formatMessageTime(isoTime) {
@@ -1505,10 +1242,6 @@
     window.saveRecord = saveRecord;
     window.addBoardMessage = addBoardMessage;
     window.removeBoardMessage = removeBoardMessage;
-    window.saveMonthlyPlan = saveMonthlyPlan;
-    window.clearMonthlyPlan = clearMonthlyPlan;
-    window.lockMonthlyPlan = lockMonthlyPlan;
-    window.previewMonthlyPlan = previewMonthlyPlan;
   </script>
 </body>
 </html>
