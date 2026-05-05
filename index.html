@@ -454,17 +454,146 @@
       resize: vertical;
     }
 
+    .entry-notepad {
+      min-height: 140px;
+      line-height: 1.6;
+      background: rgba(15, 23, 42, 0.52);
+    }
+
+    .entry-display {
+      cursor: default;
+    }
+
+    .entry-data-hidden {
+      display: none;
+    }
+
+    .entry-table {
+      display: grid;
+      gap: 6px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.52);
+      min-height: 140px;
+      align-content: start;
+    }
+
+    .entry-table-row {
+      display: grid;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .exercise-table-row {
+      grid-template-columns: minmax(0, 2fr) 80px 80px 80px auto;
+    }
+
+    .protein-table-row {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 90px auto;
+    }
+
+    .entry-table-head {
+      color: var(--accent);
+      font-weight: bold;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed var(--line);
+    }
+
+    .entry-table-cell {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #f8fafc;
+    }
+
+    .entry-delete-btn {
+      padding: 6px 8px;
+      font-size: 12px;
+      background: #475569;
+      color: #f8fafc;
+      border-radius: 8px;
+    }
+
+    .entry-table-empty {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 10px 4px;
+      text-align: center;
+    }
+
     .exercise-builder {
       display: grid;
       gap: 10px;
     }
 
-    .exercise-row {
+    .entry-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .entry-card {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid var(--line);
+    }
+
+    .entry-composer {
+      background: rgba(30, 41, 59, 0.82);
+      border-style: dashed;
+    }
+
+    .entry-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .entry-card-title {
+      font-size: 15px;
+      font-weight: bold;
+      color: #f8fafc;
+      word-break: break-word;
+    }
+
+    .entry-card-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .entry-card-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .entry-empty {
+      padding: 12px;
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      background: rgba(15, 23, 42, 0.45);
+    }
+
+    .composer-grid {
       display: grid;
       grid-template-columns: 2fr 1fr 1fr 1fr auto;
       gap: 8px;
       align-items: center;
-      margin-bottom: 8px;
+    }
+
+    .composer-grid input,
+    .protein-composer-grid input {
+      min-width: 0;
     }
 
     .form-row-3 {
@@ -481,9 +610,9 @@
       gap: 8px;
     }
 
-    .protein-entry-row {
+    .protein-composer-grid {
       display: grid;
-      grid-template-columns: 1fr 1.4fr 1fr auto;
+      grid-template-columns: 1fr 1.4fr 1fr auto auto;
       gap: 8px;
       align-items: center;
     }
@@ -502,7 +631,8 @@
     }
 
     .add-protein-btn,
-    .remove-protein-btn {
+    .remove-protein-btn,
+    .edit-protein-btn {
       background: #334155;
       color: #f8fafc;
       font-weight: bold;
@@ -528,7 +658,8 @@
     }
 
     .add-ex-btn,
-    .remove-ex-btn {
+    .remove-ex-btn,
+    .edit-ex-btn {
       background: #334155;
       color: #f8fafc;
       font-weight: bold;
@@ -584,11 +715,15 @@
         grid-template-columns: 1fr;
       }
 
+      .composer-grid {
+        grid-template-columns: 1fr;
+      }
+
       .protein-grid {
         grid-template-columns: 1fr;
       }
 
-      .protein-entry-row {
+      .protein-composer-grid {
         grid-template-columns: 1fr;
       }
 
@@ -616,6 +751,7 @@
         width: 100%;
         max-height: calc(100vh - 20px);
         padding: 14px;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
         border-radius: 14px;
       }
 
@@ -626,9 +762,9 @@
 
       .modal-actions {
         position: sticky;
-        bottom: -14px;
-        margin: 12px -14px -14px;
-        padding: 10px 14px;
+        bottom: 0;
+        margin: 12px -14px calc(-14px - env(safe-area-inset-bottom, 0px));
+        padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
         background: linear-gradient(to top, rgba(17, 24, 39, 1), rgba(17, 24, 39, 0.9));
         border-top: 1px solid var(--line);
       }
@@ -722,33 +858,42 @@
       <div class="form-group">
         <label>訓練項目（可自訂名稱）</label>
         <div class="exercise-builder">
-          <div id="exerciseRows"></div>
-          <datalist id="exerciseSuggestions"></datalist>
-          <button type="button" class="add-ex-btn" onclick="addExerciseRow()">+ 新增訓練</button>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="weight">體重 (kg)</label>
-          <input id="weight" type="text" placeholder="例如：65.2" />
-        </div>
-
-        <div class="form-group">
-          <label for="bodyFat">體脂肪 (%)</label>
-          <input id="bodyFat" type="text" placeholder="例如：22.8" />
+          <div id="exerciseDisplay" class="entry-table entry-display"></div>
+          <textarea id="exerciseText" class="entry-notepad entry-data-hidden" readonly></textarea>
+          <div class="composer-grid">
+            <input id="exerciseNameInput" list="exerciseOptionsList" placeholder="輸入或選擇訓練項目" />
+            <datalist id="exerciseOptionsList"></datalist>
+            <input id="exerciseLoadInput" type="number" min="0" step="0.5" placeholder="重量(kg)" />
+            <input id="exerciseSetsInput" type="number" min="1" step="1" placeholder="組數" />
+            <input id="exerciseRepsInput" type="number" min="1" step="1" placeholder="次數" />
+            <button type="button" class="add-ex-btn" onclick="addExerciseRow()">+ 新增訓練項目</button>
+          </div>
         </div>
       </div>
 
       <div class="form-group protein-section">
         <label>蛋白質攝取量 (g)</label>
         <div class="protein-grid">
-          <div id="proteinEntryRows"></div>
-          <datalist id="proteinMealSuggestions"></datalist>
+          <div id="proteinDisplay" class="entry-table entry-display"></div>
+          <textarea id="proteinText" class="entry-notepad entry-data-hidden" readonly></textarea>
+          <div class="protein-composer-grid">
+            <input id="proteinMealInput" list="proteinMealOptionsList" placeholder="輸入或選擇項目" />
+            <datalist id="proteinMealOptionsList"></datalist>
+            <input id="proteinFoodInput" type="text" placeholder="食物" />
+            <input id="proteinAmountInput" type="number" min="0" step="0.5" placeholder="g數" />
+            <button type="button" class="add-protein-btn" onclick="addProteinEntryRow()">+ 新增蛋白質項目</button>
+          </div>
           <div id="proteinTotalDisplay" class="protein-total">總計：-</div>
         </div>
-        <div class="protein-other-section">
-          <button type="button" class="add-protein-btn" onclick="addProteinEntryRow()">+ 新增蛋白質紀錄</button>
+      </div>
+
+      <div class="form-group">
+        <label>InBody</label>
+        <div class="form-row">
+          <input id="inbodyWeight" type="number" min="0" step="0.1" placeholder="體重(kg)" />
+          <input id="inbodyBodyFat" type="number" min="0" step="0.1" placeholder="體脂(%)" />
+          <input id="inbodyMuscle" type="number" min="0" step="0.1" placeholder="骨骼肌量(kg)" />
+          <input id="inbodyBmr" type="number" min="0" step="1" placeholder="基礎代謝(kcal)" />
         </div>
       </div>
 
@@ -1013,6 +1158,55 @@
       };
     }
 
+    function createEmptyInbodyMetrics() {
+      return {
+        weight: "",
+        bodyFat: "",
+        muscle: "",
+        bmr: "",
+      };
+    }
+
+    function normalizeInbodyMetrics(metrics) {
+      return {
+        weight: normalizeTextValue(metrics?.weight).trim(),
+        bodyFat: normalizeTextValue(metrics?.bodyFat).trim(),
+        muscle: normalizeTextValue(metrics?.muscle).trim(),
+        bmr: normalizeTextValue(metrics?.bmr).trim(),
+      };
+    }
+
+    function parseInbodyMetricsFromText(text) {
+      const raw = normalizeTextValue(text).trim();
+      if (!raw) {
+        return createEmptyInbodyMetrics();
+      }
+
+      const weightMatch = raw.match(/體重\s*([0-9]+(?:\.[0-9]+)?)/i);
+      const bodyFatMatch = raw.match(/體脂\s*([0-9]+(?:\.[0-9]+)?)/i);
+      const muscleMatch = raw.match(/骨骼肌(?:量)?\s*([0-9]+(?:\.[0-9]+)?)/i);
+      const bmrMatch = raw.match(/基礎代謝\s*([0-9]+(?:\.[0-9]+)?)/i);
+
+      return {
+        weight: weightMatch?.[1] || "",
+        bodyFat: bodyFatMatch?.[1] || "",
+        muscle: muscleMatch?.[1] || "",
+        bmr: bmrMatch?.[1] || "",
+      };
+    }
+
+    function formatInbodyMetricsText(metrics) {
+      const normalized = normalizeInbodyMetrics(metrics);
+      const parts = [
+        normalized.weight ? `體重 ${normalized.weight}kg` : "",
+        normalized.bodyFat ? `體脂 ${normalized.bodyFat}%` : "",
+        normalized.muscle ? `骨骼肌 ${normalized.muscle}kg` : "",
+        normalized.bmr ? `基礎代謝 ${normalized.bmr}kcal` : "",
+      ].filter(Boolean);
+
+      return parts.join(" / ");
+    }
+
     function normalizeTextValue(value) {
       if (value === null || value === undefined) {
         return "";
@@ -1031,8 +1225,7 @@
       if (!entry) {
         return {
           exercises: [createEmptyExercise()],
-          weight: "",
-          bodyFat: "",
+          inbody: "",
           proteinEntries: [createEmptyProteinEntry()],
           protein: "",
           note: "",
@@ -1056,11 +1249,23 @@
 
       const legacyProtein = normalizeTextValue(entry.protein).trim();
       const proteinEntries = normalizeProteinEntries(entry, legacyProtein);
+      const legacyWeight = normalizeTextValue(entry.weight).trim();
+      const legacyBodyFat = normalizeTextValue(entry.bodyFat).trim();
+      const legacyInbody = normalizeTextValue(entry.inbody).trim();
+      const fallbackInbody = legacyInbody || [
+        legacyWeight ? `體重 ${legacyWeight}kg` : "",
+        legacyBodyFat ? `體脂 ${legacyBodyFat}%` : "",
+      ].filter(Boolean).join(" / ");
+
+      const inbodyMetricsFromData = normalizeInbodyMetrics(entry.inbodyMetrics);
+      const hasStructuredInbody = Object.values(inbodyMetricsFromData).some(Boolean);
+      const parsedLegacyMetrics = parseInbodyMetricsFromText(fallbackInbody);
+      const inbodyMetrics = hasStructuredInbody ? inbodyMetricsFromData : parsedLegacyMetrics;
 
       return {
         exercises: exercises.length ? exercises : [createEmptyExercise()],
-        weight: normalizeTextValue(entry.weight),
-        bodyFat: normalizeTextValue(entry.bodyFat),
+        inbody: formatInbodyMetricsText(inbodyMetrics) || fallbackInbody,
+        inbodyMetrics,
         proteinEntries,
         protein: getProteinTotalTextFromEntries(proteinEntries, legacyProtein),
         note: normalizeTextValue(entry.note),
@@ -1216,7 +1421,7 @@
       if (!entry) return false;
       const normalized = normalizeEntry(entry);
       const hasProteinEntries = (normalized.proteinEntries || []).some(item => item.meal || item.food || item.amount);
-      return normalized.exercises.some(item => item.name || item.load) || !!normalized.note || !!normalized.weight || !!normalized.bodyFat || !!normalized.protein || hasProteinEntries;
+      return normalized.exercises.some(item => item.name || item.load) || !!normalized.note || !!normalized.inbody || !!normalized.protein || hasProteinEntries;
     }
 
     function cleanupWorkoutRecords() {
@@ -1352,7 +1557,7 @@
         cell.onclick = () => openModal(personKey, dateKey);
 
         const previewTraining = entry ? getPreviewTraining(entry) : "";
-        const previewWeight = normalizedEntry.weight ? `${normalizedEntry.weight} kg` : "";
+        const previewInbody = normalizedEntry.inbody ? "InBody" : "";
         const previewProtein = normalizedEntry.protein ? `蛋白 ${normalizedEntry.protein} g` : "";
 
         cell.innerHTML = `
@@ -1362,7 +1567,7 @@
           </div>
           <div class="day-preview">
             ${previewTraining ? `<div>${escapeHtml(previewTraining)}</div>` : ""}
-            ${previewWeight ? `<div>${escapeHtml(previewWeight)}</div>` : ""}
+            ${previewInbody ? `<div>${escapeHtml(previewInbody)}</div>` : ""}
             ${previewProtein ? `<div>${escapeHtml(previewProtein)}</div>` : ""}
           </div>
         `;
@@ -1419,40 +1624,46 @@
       });
     }
 
-    function collectExercisesFromForm() {
-      const rows = document.querySelectorAll("#exerciseRows .exercise-row");
-      return Array.from(rows).map(row => ({
-        name: row.querySelector(".exercise-name").value.trim(),
-        load: row.querySelector(".exercise-load").value.trim(),
-        reps: row.querySelector(".exercise-reps").value.trim(),
-        sets: row.querySelector(".exercise-sets").value.trim(),
-      }));
+    function formatExerciseLine(exercise) {
+      const parts = [normalizeTextValue(exercise?.name).trim()];
+      const load = normalizeTextValue(exercise?.load).trim();
+      const sets = normalizeTextValue(exercise?.sets).trim();
+      const reps = normalizeTextValue(exercise?.reps).trim();
+
+      if (load) parts.push(`${load}kg`);
+      if (sets || reps) {
+        parts.push(`${sets || "-"}組${reps ? ` x ${reps}下` : ""}`);
+      }
+
+      return parts.filter(Boolean).join(" ").trim();
     }
 
-    function buildProteinMealSuggestionsHtml() {
-      return getSortedProteinMealOptions()
-        .map(item => `<option value="${escapeHtml(item)}"></option>`)
-        .join("");
+    function renderExerciseInputOptions() {
+      const optionList = document.getElementById("exerciseOptionsList");
+      if (!optionList) return;
+
+      const options = getSortedExerciseOptions();
+      optionList.innerHTML = options.map(item => `<option value="${escapeHtml(item)}"></option>`).join("");
     }
 
     function getSortedProteinMealOptions() {
       const usageMap = new Map();
-      const addUsage = (meal) => {
-        const normalizedMeal = normalizeTextValue(meal).trim();
-        if (!normalizedMeal) return;
-        usageMap.set(normalizedMeal, (usageMap.get(normalizedMeal) || 0) + 1);
+      const addUsage = (name) => {
+        const normalizedName = normalizeTextValue(name).trim();
+        if (!normalizedName) return;
+        usageMap.set(normalizedName, (usageMap.get(normalizedName) || 0) + 1);
       };
 
       ["me", "girlfriend"].forEach(personKey => {
         Object.values(records[personKey] || {}).forEach(entry => {
           const normalized = normalizeEntry(entry);
-          (normalized.proteinEntries || []).forEach(item => addUsage(item.meal));
+          normalized.proteinEntries.forEach(item => addUsage(item.meal));
         });
       });
 
-      PROTEIN_MEAL_OPTIONS.forEach(item => {
-        if (!usageMap.has(item)) {
-          usageMap.set(item, 0);
+      PROTEIN_MEAL_OPTIONS.forEach(name => {
+        if (!usageMap.has(name)) {
+          usageMap.set(name, 0);
         }
       });
 
@@ -1477,54 +1688,178 @@
       });
     }
 
+    function renderProteinMealInputOptions() {
+      const optionList = document.getElementById("proteinMealOptionsList");
+      if (!optionList) return;
+
+      const options = getSortedProteinMealOptions();
+      optionList.innerHTML = options.map(item => `<option value="${escapeHtml(item)}"></option>`).join("");
+    }
+
+    function ensureOptionExists(optionList, value) {
+      if (!value) return;
+      if (!optionList.includes(value)) {
+        optionList.push(value);
+      }
+    }
+
+    function parseExercisesText(text) {
+      return String(text || "")
+        .split("\n")
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => {
+          const loadMatch = line.match(/(\d+(?:\.\d+)?)\s*kg/i);
+          const setsMatch = line.match(/(\d+)\s*組/);
+          const repsMatch = line.match(/(?:x|X|×|\*)\s*(\d+)\s*下?/i);
+
+          const name = line
+            .replace(/(\d+(?:\.\d+)?)\s*kg/ig, "")
+            .replace(/(\d+)\s*組/g, "")
+            .replace(/(?:x|X|×|\*)\s*(\d+)\s*下?/ig, "")
+            .replace(/[|,，]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim() || line;
+
+          return {
+            name,
+            load: loadMatch?.[1] || "",
+            reps: repsMatch?.[1] || "",
+            sets: setsMatch?.[1] || "",
+          };
+        });
+    }
+
+    function collectExercisesFromForm() {
+      return parseExercisesText(document.getElementById("exerciseText")?.value || "");
+    }
+
+    function renderExerciseRows(exercises) {
+      const text = (exercises || [])
+        .map(formatExerciseLine)
+        .filter(Boolean)
+        .join("\n");
+
+      document.getElementById("exerciseText").value = text;
+      renderExerciseDisplay(exercises || []);
+    }
+
+    function renderExerciseDisplay(exercises) {
+      const container = document.getElementById("exerciseDisplay");
+      if (!container) return;
+
+      const rows = (exercises || [])
+        .map((item, index) => ({ item, index }))
+        .filter(row => row.item.name || row.item.load || row.item.sets || row.item.reps);
+      if (!rows.length) {
+        container.innerHTML = `<div class="entry-table-empty">按下方按鈕新增訓練項目</div>`;
+        return;
+      }
+
+      const body = rows
+        .map(row => `
+          <div class="entry-table-row exercise-table-row">
+            <div class="entry-table-cell">${escapeHtml(normalizeTextValue(row.item.name).trim())}</div>
+            <div class="entry-table-cell">${escapeHtml(normalizeTextValue(row.item.load).trim()) || "-"}</div>
+            <div class="entry-table-cell">${escapeHtml(normalizeTextValue(row.item.sets).trim()) || "-"}</div>
+            <div class="entry-table-cell">${escapeHtml(normalizeTextValue(row.item.reps).trim()) || "-"}</div>
+            <button type="button" class="entry-delete-btn" onclick="removeExerciseAt(${row.index})">刪除</button>
+          </div>
+        `)
+        .join("");
+
+      container.innerHTML = `
+        <div class="entry-table-row exercise-table-row entry-table-head">
+          <div>項目</div>
+          <div>kg</div>
+          <div>組數</div>
+          <div>次數</div>
+          <div></div>
+        </div>
+        ${body}
+      `;
+    }
+
+    function formatProteinEntryLine(item) {
+      const meal = normalizeTextValue(item?.meal).trim();
+      const food = normalizeTextValue(item?.food).trim();
+      const amount = normalizeTextValue(item?.amount).trim();
+      return [meal, food, amount ? `${amount}g` : ""].filter(Boolean).join(" ").trim();
+    }
+
+    function parseProteinEntriesText(text) {
+      return String(text || "")
+        .split("\n")
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => {
+          const amountMatch = line.match(/(\d+(?:\.\d+)?)\s*g/i);
+          const amount = amountMatch?.[1] || "";
+          const withoutAmount = amountMatch ? line.replace(amountMatch[0], "").trim() : line;
+          const parts = withoutAmount.split(/\s+/).filter(Boolean);
+
+          if (parts.length >= 2) {
+            return {
+              meal: parts[0],
+              food: parts.slice(1).join(" "),
+              amount,
+            };
+          }
+
+          return {
+            meal: "",
+            food: withoutAmount,
+            amount,
+          };
+        });
+    }
+
     function collectProteinEntriesFromForm() {
-      const rows = document.querySelectorAll("#proteinEntryRows .protein-entry-row");
-      return Array.from(rows)
-        .map(row => ({
-          meal: normalizeTextValue(row.querySelector(".protein-entry-meal")?.value).trim(),
-          food: normalizeTextValue(row.querySelector(".protein-entry-food")?.value).trim(),
-          amount: normalizeTextValue(row.querySelector(".protein-entry-amount")?.value).trim(),
-        }))
-        .filter(item => item.meal || item.food || item.amount);
+      return parseProteinEntriesText(document.getElementById("proteinText")?.value || "");
     }
 
     function renderProteinEntryRows(entries) {
-      const rowsContainer = document.getElementById("proteinEntryRows");
-      const suggestionList = document.getElementById("proteinMealSuggestions");
-      suggestionList.innerHTML = buildProteinMealSuggestionsHtml();
-      rowsContainer.innerHTML = "";
+      const text = (entries || [])
+        .map(formatProteinEntryLine)
+        .filter(Boolean)
+        .join("\n");
 
-      const list = Array.isArray(entries) ? entries : [];
-      list.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "protein-entry-row";
-        row.innerHTML = `
-          <input class="protein-entry-meal" list="proteinMealSuggestions" placeholder="項目（早餐/午餐/晚餐或自定義）" value="${escapeHtml(item.meal || "")}" />
-          <input class="protein-entry-food" type="text" placeholder="食物" value="${escapeHtml(item.food || "")}" />
-          <input class="protein-entry-amount" type="number" min="0" step="0.1" placeholder="蛋白質(g)" value="${escapeHtml(item.amount || "")}" />
-          <button type="button" class="remove-protein-btn" onclick="removeProteinEntryRow(this)">刪除</button>
-        `;
-        rowsContainer.appendChild(row);
-      });
-
-      rowsContainer.querySelectorAll(".protein-entry-meal, .protein-entry-food, .protein-entry-amount").forEach(input => {
-        input.addEventListener("input", updateProteinTotalDisplay);
-      });
+      document.getElementById("proteinText").value = text;
+      renderProteinDisplay(entries || []);
     }
 
-    function addProteinEntryRow() {
-      const current = collectProteinEntriesFromForm();
-      current.push(createEmptyProteinEntry());
-      renderProteinEntryRows(current);
-      updateProteinTotalDisplay();
-    }
+    function renderProteinDisplay(entries) {
+      const container = document.getElementById("proteinDisplay");
+      if (!container) return;
 
-    function removeProteinEntryRow(buttonEl) {
-      const row = buttonEl.closest(".protein-entry-row");
-      if (row) {
-        row.remove();
+      const rows = (entries || [])
+        .map((item, index) => ({ item, index }))
+        .filter(row => row.item.meal || row.item.food || row.item.amount);
+      if (!rows.length) {
+        container.innerHTML = `<div class="entry-table-empty">按下方按鈕新增蛋白質項目</div>`;
+        return;
       }
-      updateProteinTotalDisplay();
+
+      const body = rows
+        .map(row => `
+          <div class="entry-table-row protein-table-row">
+            <div class="entry-table-cell">${escapeHtml(normalizeTextValue(row.item.meal).trim()) || "-"}</div>
+            <div class="entry-table-cell">${escapeHtml(normalizeTextValue(row.item.food).trim()) || "-"}</div>
+            <div class="entry-table-cell">${escapeHtml(normalizeTextValue(row.item.amount).trim()) || "-"}</div>
+            <button type="button" class="entry-delete-btn" onclick="removeProteinAt(${row.index})">刪除</button>
+          </div>
+        `)
+        .join("");
+
+      container.innerHTML = `
+        <div class="entry-table-row protein-table-row entry-table-head">
+          <div>項目</div>
+          <div>食物</div>
+          <div>g數</div>
+          <div></div>
+        </div>
+        ${body}
+      `;
     }
 
     function updateProteinTotalDisplay() {
@@ -1536,45 +1871,94 @@
       totalEl.textContent = totalText ? `總計：${totalText} g` : "總計：-";
     }
 
-    function renderExerciseRows(exercises) {
-      const rowsContainer = document.getElementById("exerciseRows");
-      const suggestionList = document.getElementById("exerciseSuggestions");
-      suggestionList.innerHTML = buildExerciseSuggestionsHtml();
-      rowsContainer.innerHTML = "";
+    function appendLineToTextarea(textareaId, line) {
+      const textarea = document.getElementById(textareaId);
+      if (!textarea) return;
 
-      exercises.forEach(exercise => {
-        const row = document.createElement("div");
-        row.className = "exercise-row";
-        row.innerHTML = `
-          <input class="exercise-name" list="exerciseSuggestions" placeholder="訓練名稱（可自訂）" value="${escapeHtml(exercise.name)}" />
-          <input class="exercise-load" type="number" min="0" step="0.5" placeholder="重量(kg)" value="${escapeHtml(exercise.load)}" />
-          <input class="exercise-reps" type="number" min="1" step="1" placeholder="每組幾下" value="${escapeHtml(exercise.reps)}" />
-          <input class="exercise-sets" type="number" min="1" step="1" placeholder="幾組" value="${escapeHtml(exercise.sets)}" />
-          <button type="button" class="remove-ex-btn" onclick="removeExerciseRow(this)">刪除</button>
-        `;
-        rowsContainer.appendChild(row);
-      });
+      const current = textarea.value.trim();
+      textarea.value = current ? `${current}\n${line}` : line;
+
+      if (textareaId === "exerciseText") {
+        renderExerciseDisplay(collectExercisesFromForm());
+      } else if (textareaId === "proteinText") {
+        renderProteinDisplay(collectProteinEntriesFromForm());
+      }
     }
 
     function addExerciseRow() {
-      const current = collectExercisesFromForm();
-      current.push(createEmptyExercise());
-      renderExerciseRows(current);
+      const name = normalizeTextValue(document.getElementById("exerciseNameInput")?.value).trim();
+      if (name) {
+        ensureOptionExists(EXERCISE_OPTIONS, name);
+        renderExerciseInputOptions();
+      }
+
+      if (!name) return;
+
+      const load = normalizeTextValue(document.getElementById("exerciseLoadInput")?.value).trim();
+      const sets = normalizeTextValue(document.getElementById("exerciseSetsInput")?.value).trim();
+      const reps = normalizeTextValue(document.getElementById("exerciseRepsInput")?.value).trim();
+
+      const line = formatExerciseLine({ name, load, sets, reps });
+      if (!line) return;
+
+      appendLineToTextarea("exerciseText", line);
+
+      document.getElementById("exerciseNameInput").value = "";
+      document.getElementById("exerciseLoadInput").value = "";
+      document.getElementById("exerciseSetsInput").value = "";
+      document.getElementById("exerciseRepsInput").value = "";
     }
+    function editExerciseRow() {}
+    function removeExerciseRow() {
+      const rows = collectExercisesFromForm();
+      if (!rows.length) return;
 
-    function removeExerciseRow(buttonEl) {
-      const rowsContainer = document.getElementById("exerciseRows");
-      const rows = rowsContainer.querySelectorAll(".exercise-row");
+      rows.pop();
+      renderExerciseRows(rows);
+    }
+    function removeExerciseAt(index) {
+      const rows = collectExercisesFromForm();
+      if (index < 0 || index >= rows.length) return;
 
-      if (rows.length <= 1) {
-        renderExerciseRows([createEmptyExercise()]);
-        return;
+      rows.splice(index, 1);
+      renderExerciseRows(rows);
+    }
+    function addProteinEntryRow() {
+      const meal = normalizeTextValue(document.getElementById("proteinMealInput")?.value).trim();
+      if (meal) {
+        ensureOptionExists(PROTEIN_MEAL_OPTIONS, meal);
+        renderProteinMealInputOptions();
       }
 
-      const row = buttonEl.closest(".exercise-row");
-      if (row) {
-        row.remove();
-      }
+      const food = normalizeTextValue(document.getElementById("proteinFoodInput")?.value).trim();
+      const amount = normalizeTextValue(document.getElementById("proteinAmountInput")?.value).trim();
+
+      const line = formatProteinEntryLine({ meal, food, amount });
+      if (!line) return;
+
+      appendLineToTextarea("proteinText", line);
+
+      document.getElementById("proteinMealInput").value = "";
+      document.getElementById("proteinFoodInput").value = "";
+      document.getElementById("proteinAmountInput").value = "";
+      updateProteinTotalDisplay();
+    }
+    function editProteinEntryRow() {}
+    function removeProteinEntryRow() {
+      const rows = collectProteinEntriesFromForm();
+      if (!rows.length) return;
+
+      rows.pop();
+      renderProteinEntryRows(rows);
+      updateProteinTotalDisplay();
+    }
+    function removeProteinAt(index) {
+      const rows = collectProteinEntriesFromForm();
+      if (index < 0 || index >= rows.length) return;
+
+      rows.splice(index, 1);
+      renderProteinEntryRows(rows);
+      updateProteinTotalDisplay();
     }
 
     function openModal(person, dateKey) {
@@ -1584,10 +1968,14 @@
       const personLabel = person === "me" ? "Jimmy" : "Celine";
       document.getElementById("modalTitle").textContent = `${personLabel}｜${dateKey}｜訓練紀錄`;
 
+      renderExerciseInputOptions();
+      renderProteinMealInputOptions();
       const entry = normalizeEntry(records[person][dateKey]);
       renderExerciseRows(entry.exercises);
-      document.getElementById("weight").value = entry.weight;
-      document.getElementById("bodyFat").value = entry.bodyFat;
+      document.getElementById("inbodyWeight").value = entry.inbodyMetrics?.weight || "";
+      document.getElementById("inbodyBodyFat").value = entry.inbodyMetrics?.bodyFat || "";
+      document.getElementById("inbodyMuscle").value = entry.inbodyMetrics?.muscle || "";
+      document.getElementById("inbodyBmr").value = entry.inbodyMetrics?.bmr || "";
       renderProteinEntryRows(entry.proteinEntries);
       updateProteinTotalDisplay();
       document.getElementById("note").value = entry.note;
@@ -1614,11 +2002,17 @@
       if (!person || !dateKey) return;
 
       const proteinEntries = collectProteinEntriesFromForm();
+      const inbodyMetrics = normalizeInbodyMetrics({
+        weight: document.getElementById("inbodyWeight")?.value,
+        bodyFat: document.getElementById("inbodyBodyFat")?.value,
+        muscle: document.getElementById("inbodyMuscle")?.value,
+        bmr: document.getElementById("inbodyBmr")?.value,
+      });
 
       records[person][dateKey] = {
         exercises: collectExercisesFromForm(),
-        weight: document.getElementById("weight").value.trim(),
-        bodyFat: document.getElementById("bodyFat").value.trim(),
+        inbodyMetrics,
+        inbody: formatInbodyMetricsText(inbodyMetrics),
         proteinEntries,
         protein: getProteinTotalTextFromEntries(proteinEntries),
         note: document.getElementById("note").value.trim(),
@@ -1681,8 +2075,6 @@
       }
     }, { passive: false });
 
-    document.getElementById("proteinEntryRows").addEventListener("input", updateProteinTotalDisplay);
-
     async function bootstrap() {
       renderWeekdays();
       renderCalendars();
@@ -1720,6 +2112,8 @@
     window.updateProteinTotalDisplay = updateProteinTotalDisplay;
     window.addProteinEntryRow = addProteinEntryRow;
     window.removeProteinEntryRow = removeProteinEntryRow;
+    window.removeExerciseAt = removeExerciseAt;
+    window.removeProteinAt = removeProteinAt;
   </script>
 </body>
 </html>
