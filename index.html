@@ -36,6 +36,18 @@
       padding: 24px;
     }
 
+    html.modal-open,
+    body.modal-open {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    body.modal-open {
+      position: fixed;
+      width: 100%;
+      touch-action: none;
+    }
+
     .page {
       max-width: 1400px;
       margin: 0 auto;
@@ -358,7 +370,7 @@
 
     .board-input-row {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: 120px 1fr auto;
       gap: 8px;
     }
 
@@ -374,9 +386,12 @@
       background: rgba(2, 6, 23, 0.72);
       display: none;
       justify-content: center;
-      align-items: center;
-      padding: 20px;
+      align-items: flex-start;
+      padding: 16px;
       z-index: 999;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
     }
 
     .modal-backdrop.show {
@@ -384,12 +399,18 @@
     }
 
     .modal {
-      width: min(760px, 100%);
+      width: min(760px, calc(100vw - 24px));
       background: #111827;
       border: 2px solid var(--accent);
       border-radius: 18px;
       box-shadow: 0 0 24px rgba(0, 0, 0, 0.45);
       padding: 20px;
+      margin-top: 8px;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
     }
 
     .modal h2 {
@@ -440,10 +461,70 @@
 
     .exercise-row {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr auto;
+      grid-template-columns: 2fr 1fr 1fr 1fr auto;
       gap: 8px;
       align-items: center;
       margin-bottom: 8px;
+    }
+
+    .form-row-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .protein-section {
+      margin-top: 2px;
+    }
+
+    .protein-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .protein-entry-row {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .protein-other-section {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .protein-other-row {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .add-protein-btn,
+    .remove-protein-btn {
+      background: #334155;
+      color: #f8fafc;
+      font-weight: bold;
+      padding: 10px 12px;
+    }
+
+    .add-protein-btn {
+      justify-self: flex-start;
+      background: #0ea5e9;
+    }
+
+    .protein-total {
+      display: grid;
+      place-items: center;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      color: var(--accent);
+      font-weight: bold;
+      background: rgba(15, 23, 42, 0.55);
+      min-height: 42px;
+      padding: 0 10px;
+      white-space: nowrap;
     }
 
     .add-ex-btn,
@@ -503,6 +584,18 @@
         grid-template-columns: 1fr;
       }
 
+      .protein-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .protein-entry-row {
+        grid-template-columns: 1fr;
+      }
+
+      .protein-other-row {
+        grid-template-columns: 1fr;
+      }
+
       .board-input-row {
         grid-template-columns: 1fr;
       }
@@ -513,6 +606,37 @@
 
       .day {
         min-height: 86px;
+      }
+
+      .modal-backdrop {
+        padding: 10px;
+      }
+
+      .modal {
+        width: 100%;
+        max-height: calc(100vh - 20px);
+        padding: 14px;
+        border-radius: 14px;
+      }
+
+      .modal h2 {
+        font-size: 18px;
+        margin-bottom: 12px;
+      }
+
+      .modal-actions {
+        position: sticky;
+        bottom: -14px;
+        margin: 12px -14px -14px;
+        padding: 10px 14px;
+        background: linear-gradient(to top, rgba(17, 24, 39, 1), rgba(17, 24, 39, 0.9));
+        border-top: 1px solid var(--line);
+      }
+
+      .save-btn,
+      .delete-btn,
+      .cancel-btn {
+        flex: 1;
       }
     }
   </style>
@@ -547,6 +671,10 @@
           <div class="board-title">Jimmy 留言板</div>
           <div id="boardListMe" class="board-list"></div>
           <div class="board-input-row">
+            <select id="boardAuthorMe">
+              <option value="Jimmy">Jimmy</option>
+              <option value="Celine">Celine</option>
+            </select>
             <input id="boardInputMe" type="text" maxlength="80" placeholder="給 Jimmy 的一句話..." />
             <button class="board-btn" onclick="addBoardMessage('me')">送出</button>
           </div>
@@ -575,6 +703,10 @@
           <div class="board-title">Celine 留言板</div>
           <div id="boardListGf" class="board-list"></div>
           <div class="board-input-row">
+            <select id="boardAuthorGf">
+              <option value="Jimmy">Jimmy</option>
+              <option value="Celine" selected>Celine</option>
+            </select>
             <input id="boardInputGf" type="text" maxlength="80" placeholder="給 Celine 的一句話..." />
             <button class="board-btn" onclick="addBoardMessage('girlfriend')">送出</button>
           </div>
@@ -588,9 +720,10 @@
       <h2 id="modalTitle">訓練紀錄</h2>
 
       <div class="form-group">
-        <label>訓練項目</label>
+        <label>訓練項目（可自訂名稱）</label>
         <div class="exercise-builder">
           <div id="exerciseRows"></div>
+          <datalist id="exerciseSuggestions"></datalist>
           <button type="button" class="add-ex-btn" onclick="addExerciseRow()">+ 新增訓練</button>
         </div>
       </div>
@@ -604,6 +737,18 @@
         <div class="form-group">
           <label for="bodyFat">體脂肪 (%)</label>
           <input id="bodyFat" type="text" placeholder="例如：22.8" />
+        </div>
+      </div>
+
+      <div class="form-group protein-section">
+        <label>蛋白質攝取量 (g)</label>
+        <div class="protein-grid">
+          <div id="proteinEntryRows"></div>
+          <datalist id="proteinMealSuggestions"></datalist>
+          <div id="proteinTotalDisplay" class="protein-total">總計：-</div>
+        </div>
+        <div class="protein-other-section">
+          <button type="button" class="add-protein-btn" onclick="addProteinEntryRow()">+ 新增蛋白質紀錄</button>
         </div>
       </div>
 
@@ -664,6 +809,15 @@
       "飛輪",
       "划步機"
     ];
+    const PROTEIN_MEAL_OPTIONS = ["早餐", "午餐", "晚餐"];
+    const BASE_EXERCISE_ORDER = EXERCISE_OPTIONS.reduce((acc, name, index) => {
+      acc[name] = index;
+      return acc;
+    }, {});
+    const BASE_PROTEIN_MEAL_ORDER = PROTEIN_MEAL_OPTIONS.reduce((acc, name, index) => {
+      acc[name] = index;
+      return acc;
+    }, {});
 
     let db = null;
     let cloudDocRef = null;
@@ -678,6 +832,8 @@
       person: null,
       dateKey: null,
     };
+
+    let lockedScrollY = 0;
 
     let records = loadLocalRecords();
 
@@ -722,6 +878,7 @@
 
           return {
             text: String(item.text || "").trim(),
+            author: String(item.author || "匿名").trim() || "匿名",
             time: item.time || new Date().toISOString(),
           };
         })
@@ -824,6 +981,7 @@
     }
 
     function persistRecords() {
+      cleanupWorkoutRecords();
       persistLocalRecords();
       syncToCloud();
     }
@@ -841,9 +999,32 @@
     function createEmptyExercise() {
       return {
         name: "",
+        load: "",
         reps: "",
         sets: "",
       };
+    }
+
+    function createEmptyProteinEntry() {
+      return {
+        meal: "",
+        food: "",
+        amount: "",
+      };
+    }
+
+    function normalizeTextValue(value) {
+      if (value === null || value === undefined) {
+        return "";
+      }
+
+      const text = String(value);
+      const normalized = text.trim().toLowerCase();
+      if (normalized === "undefined" || normalized === "null") {
+        return "";
+      }
+
+      return text;
     }
 
     function normalizeEntry(entry) {
@@ -852,6 +1033,8 @@
           exercises: [createEmptyExercise()],
           weight: "",
           bodyFat: "",
+          proteinEntries: [createEmptyProteinEntry()],
+          protein: "",
           note: "",
         };
       }
@@ -859,22 +1042,127 @@
       const hasExercises = Array.isArray(entry.exercises);
       const exercises = hasExercises
         ? entry.exercises.map(item => ({
-            name: item.name || "",
-            reps: item.reps || "",
-            sets: item.sets || "",
+            name: normalizeTextValue(item?.name),
+            load: normalizeTextValue(item?.load),
+            reps: normalizeTextValue(item?.reps),
+            sets: normalizeTextValue(item?.sets),
           }))
         : [{
-            name: entry.training || "",
+            name: normalizeTextValue(entry.training),
+            load: "",
             reps: "",
-            sets: entry.sets || "",
+            sets: normalizeTextValue(entry.sets),
           }];
+
+      const legacyProtein = normalizeTextValue(entry.protein).trim();
+      const proteinEntries = normalizeProteinEntries(entry, legacyProtein);
 
       return {
         exercises: exercises.length ? exercises : [createEmptyExercise()],
-        weight: entry.weight || "",
-        bodyFat: entry.bodyFat || "",
-        note: entry.note || "",
+        weight: normalizeTextValue(entry.weight),
+        bodyFat: normalizeTextValue(entry.bodyFat),
+        proteinEntries,
+        protein: getProteinTotalTextFromEntries(proteinEntries, legacyProtein),
+        note: normalizeTextValue(entry.note),
       };
+    }
+
+    function normalizeProteinEntries(entry, legacyProtein = "") {
+      const entries = [];
+
+      const addEntry = (meal, food, amount) => {
+        const normalizedMeal = normalizeTextValue(meal).trim();
+        const normalizedFood = normalizeTextValue(food).trim();
+        const normalizedAmount = normalizeTextValue(amount).trim();
+        if (!normalizedMeal && !normalizedFood && !normalizedAmount) {
+          return;
+        }
+
+        entries.push({
+          meal: normalizedMeal,
+          food: normalizedFood,
+          amount: normalizedAmount,
+        });
+      };
+
+      if (Array.isArray(entry.proteinEntries)) {
+        entry.proteinEntries.forEach(item => addEntry(item?.meal, item?.food, item?.amount));
+      }
+
+      const rawMeals = entry.proteinMeals;
+      if (rawMeals && typeof rawMeals === "object") {
+        // 兼容新舊 proteinMeals 結構
+        const breakfast = rawMeals.breakfast;
+        const lunch = rawMeals.lunch;
+        const dinner = rawMeals.dinner;
+
+        if (breakfast && typeof breakfast === "object") {
+          addEntry("早餐", breakfast.name, breakfast.amount);
+        } else {
+          addEntry("早餐", "", breakfast);
+        }
+
+        if (lunch && typeof lunch === "object") {
+          addEntry("午餐", lunch.name, lunch.amount);
+        } else {
+          addEntry("午餐", "", lunch);
+        }
+
+        if (dinner && typeof dinner === "object") {
+          addEntry("晚餐", dinner.name, dinner.amount);
+        } else {
+          addEntry("晚餐", "", dinner);
+        }
+
+        if (Array.isArray(rawMeals.others)) {
+          rawMeals.others.forEach(item => addEntry(item?.name || "其他", "", item?.amount));
+        }
+
+        const legacySnack = normalizeTextValue(rawMeals.snack).trim();
+        if (legacySnack) {
+          addEntry("點心", "", legacySnack);
+        }
+      }
+
+      const fallbackLegacy = normalizeTextValue(legacyProtein).trim();
+      if (!entries.length && fallbackLegacy) {
+        addEntry("其他", "", fallbackLegacy);
+      }
+
+      return entries.length ? entries : [createEmptyProteinEntry()];
+    }
+
+    function toProteinNumber(value) {
+      const text = normalizeTextValue(value).trim();
+      if (!text) return null;
+
+      const number = Number(text);
+      if (!Number.isFinite(number) || number < 0) {
+        return null;
+      }
+
+      return number;
+    }
+
+    function formatProteinNumber(value) {
+      const rounded = Math.round(value * 10) / 10;
+      return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+    }
+
+    function getProteinEntriesTotal(entries) {
+      return (entries || []).reduce((sum, item) => {
+        const num = toProteinNumber(item?.amount);
+        return sum + (num === null ? 0 : num);
+      }, 0);
+    }
+
+    function getProteinTotalTextFromEntries(entries, legacyProtein = "") {
+      const total = getProteinEntriesTotal(entries);
+      if (total > 0) {
+        return formatProteinNumber(total);
+      }
+
+      return normalizeTextValue(legacyProtein).trim();
     }
 
     function getPreviewTraining(entry) {
@@ -886,7 +1174,7 @@
       }
 
       const first = valid[0];
-      const firstLine = `${first.name}${first.sets ? ` ${first.sets}組` : ""}${first.reps ? ` x ${first.reps}下` : ""}`;
+      const firstLine = `${first.name}${first.load ? ` ${first.load}kg` : ""}${first.sets ? ` ${first.sets}組` : ""}${first.reps ? ` x ${first.reps}下` : ""}`;
       const suffix = valid.length > 1 ? ` +${valid.length - 1}` : "";
       return (firstLine + suffix).slice(0, 24);
     }
@@ -912,6 +1200,7 @@
     }
 
     function renderCalendars() {
+      cleanupWorkoutRecords();
       document.getElementById("monthLabelMe").textContent = formatMonthLabel(currentYear, currentMonth);
       document.getElementById("monthLabelGf").textContent = formatMonthLabel(currentYear, currentMonth);
 
@@ -926,7 +1215,19 @@
     function hasWorkoutOnEntry(entry) {
       if (!entry) return false;
       const normalized = normalizeEntry(entry);
-      return normalized.exercises.some(item => item.name) || !!normalized.note || !!normalized.weight || !!normalized.bodyFat;
+      const hasProteinEntries = (normalized.proteinEntries || []).some(item => item.meal || item.food || item.amount);
+      return normalized.exercises.some(item => item.name || item.load) || !!normalized.note || !!normalized.weight || !!normalized.bodyFat || !!normalized.protein || hasProteinEntries;
+    }
+
+    function cleanupWorkoutRecords() {
+      ["me", "girlfriend"].forEach(personKey => {
+        const personRecords = records[personKey] || {};
+        Object.keys(personRecords).forEach(dateKey => {
+          if (!hasWorkoutOnEntry(personRecords[dateKey])) {
+            delete personRecords[dateKey];
+          }
+        });
+      });
     }
 
     function getWorkoutDateKeys(personKey) {
@@ -940,13 +1241,6 @@
       return getWorkoutDateKeys(personKey).filter(dateKey => dateKey.startsWith(prefix)).length;
     }
 
-    function getRewardLabel(points) {
-      if (points >= 60) return "獎勵：很穩定，安排一次放鬆約會日";
-      if (points >= 30) return "獎勵：維持中，來個小小犒賞";
-      if (points >= 10) return "獎勵：起步很棒，繼續累積";
-      return "獎勵：先從第一個 +1 開始";
-    }
-
     function renderGamificationPanel(personKey, containerId, nameLabel) {
       const box = document.getElementById(containerId);
       if (!box) return;
@@ -957,9 +1251,9 @@
       box.innerHTML = `
         <div class="gamify-title">${nameLabel} 的積分紀錄</div>
         <div>計分規則：有去健身房一次就 +1 分</div>
-        <div>本月積分：${monthPoints}</div>
-        <div>累積積分：${totalPoints}</div>
-        <div>${getRewardLabel(totalPoints)}</div>
+        <div>本月健身次數：${monthPoints} 次</div>
+        <div>本月積分：${monthPoints} 分</div>
+        <div>累積點數：${totalPoints} 分</div>
       `;
     }
 
@@ -992,7 +1286,7 @@
           <div class="board-item">
             <div class="board-text">${escapeHtml(item.text)}</div>
             <div class="board-meta">
-              <span>${escapeHtml(formatMessageTime(item.time))}</span>
+              <span>${escapeHtml(item.author || "匿名")} · ${escapeHtml(formatMessageTime(item.time))}</span>
               <button class="board-delete-btn" onclick="removeBoardMessage('${personKey}', ${index})">刪除</button>
             </div>
           </div>
@@ -1002,7 +1296,9 @@
 
     function addBoardMessage(personKey) {
       const inputId = personKey === "me" ? "boardInputMe" : "boardInputGf";
+      const authorId = personKey === "me" ? "boardAuthorMe" : "boardAuthorGf";
       const input = document.getElementById(inputId);
+      const authorSelect = document.getElementById(authorId);
       if (!input) return;
 
       const text = input.value.trim();
@@ -1010,6 +1306,7 @@
 
       records.messageBoard[personKey].push({
         text,
+        author: normalizeTextValue(authorSelect?.value) || "匿名",
         time: new Date().toISOString(),
       });
 
@@ -1049,12 +1346,14 @@
 
         const dateKey = formatDateKey(currentYear, currentMonth, dayNumber);
         const entry = records[personKey][dateKey];
+        const normalizedEntry = normalizeEntry(entry);
 
         cell.className = "day";
         cell.onclick = () => openModal(personKey, dateKey);
 
         const previewTraining = entry ? getPreviewTraining(entry) : "";
-        const previewWeight = entry && entry.weight ? `${entry.weight} kg` : "";
+        const previewWeight = normalizedEntry.weight ? `${normalizedEntry.weight} kg` : "";
+        const previewProtein = normalizedEntry.protein ? `蛋白 ${normalizedEntry.protein} g` : "";
 
         cell.innerHTML = `
           <div class="day-top">
@@ -1064,6 +1363,7 @@
           <div class="day-preview">
             ${previewTraining ? `<div>${escapeHtml(previewTraining)}</div>` : ""}
             ${previewWeight ? `<div>${escapeHtml(previewWeight)}</div>` : ""}
+            ${previewProtein ? `<div>${escapeHtml(previewProtein)}</div>` : ""}
           </div>
         `;
 
@@ -1071,34 +1371,183 @@
       }
     }
 
-    function buildExerciseOptionsHtml(selectedName) {
-      const defaultOption = '<option value="">請選擇訓練</option>';
-      const options = EXERCISE_OPTIONS.map(item => {
-        const selected = item === selectedName ? "selected" : "";
-        return `<option value="${escapeHtml(item)}" ${selected}>${escapeHtml(item)}</option>`;
-      }).join("");
+    function buildExerciseSuggestionsHtml() {
+      return getSortedExerciseOptions()
+        .map(item => `<option value="${escapeHtml(item)}"></option>`)
+        .join("");
+    }
 
-      return defaultOption + options;
+    function getSortedExerciseOptions() {
+      const usageMap = new Map();
+      const addUsage = (name) => {
+        const normalizedName = normalizeTextValue(name).trim();
+        if (!normalizedName) return;
+        usageMap.set(normalizedName, (usageMap.get(normalizedName) || 0) + 1);
+      };
+
+      ["me", "girlfriend"].forEach(personKey => {
+        Object.values(records[personKey] || {}).forEach(entry => {
+          const normalized = normalizeEntry(entry);
+          normalized.exercises.forEach(exercise => addUsage(exercise.name));
+        });
+      });
+
+      EXERCISE_OPTIONS.forEach(name => {
+        if (!usageMap.has(name)) {
+          usageMap.set(name, 0);
+        }
+      });
+
+      return Array.from(usageMap.keys()).sort((a, b) => {
+        const countDiff = (usageMap.get(b) || 0) - (usageMap.get(a) || 0);
+        if (countDiff !== 0) {
+          return countDiff;
+        }
+
+        const aBaseIndex = BASE_EXERCISE_ORDER[a];
+        const bBaseIndex = BASE_EXERCISE_ORDER[b];
+        const aInBase = aBaseIndex !== undefined;
+        const bInBase = bBaseIndex !== undefined;
+
+        if (aInBase && bInBase) {
+          return aBaseIndex - bBaseIndex;
+        }
+
+        if (aInBase) return -1;
+        if (bInBase) return 1;
+        return a.localeCompare(b, "zh-Hant");
+      });
     }
 
     function collectExercisesFromForm() {
       const rows = document.querySelectorAll("#exerciseRows .exercise-row");
       return Array.from(rows).map(row => ({
         name: row.querySelector(".exercise-name").value.trim(),
+        load: row.querySelector(".exercise-load").value.trim(),
         reps: row.querySelector(".exercise-reps").value.trim(),
         sets: row.querySelector(".exercise-sets").value.trim(),
       }));
     }
 
+    function buildProteinMealSuggestionsHtml() {
+      return getSortedProteinMealOptions()
+        .map(item => `<option value="${escapeHtml(item)}"></option>`)
+        .join("");
+    }
+
+    function getSortedProteinMealOptions() {
+      const usageMap = new Map();
+      const addUsage = (meal) => {
+        const normalizedMeal = normalizeTextValue(meal).trim();
+        if (!normalizedMeal) return;
+        usageMap.set(normalizedMeal, (usageMap.get(normalizedMeal) || 0) + 1);
+      };
+
+      ["me", "girlfriend"].forEach(personKey => {
+        Object.values(records[personKey] || {}).forEach(entry => {
+          const normalized = normalizeEntry(entry);
+          (normalized.proteinEntries || []).forEach(item => addUsage(item.meal));
+        });
+      });
+
+      PROTEIN_MEAL_OPTIONS.forEach(item => {
+        if (!usageMap.has(item)) {
+          usageMap.set(item, 0);
+        }
+      });
+
+      return Array.from(usageMap.keys()).sort((a, b) => {
+        const countDiff = (usageMap.get(b) || 0) - (usageMap.get(a) || 0);
+        if (countDiff !== 0) {
+          return countDiff;
+        }
+
+        const aBaseIndex = BASE_PROTEIN_MEAL_ORDER[a];
+        const bBaseIndex = BASE_PROTEIN_MEAL_ORDER[b];
+        const aInBase = aBaseIndex !== undefined;
+        const bInBase = bBaseIndex !== undefined;
+
+        if (aInBase && bInBase) {
+          return aBaseIndex - bBaseIndex;
+        }
+
+        if (aInBase) return -1;
+        if (bInBase) return 1;
+        return a.localeCompare(b, "zh-Hant");
+      });
+    }
+
+    function collectProteinEntriesFromForm() {
+      const rows = document.querySelectorAll("#proteinEntryRows .protein-entry-row");
+      return Array.from(rows)
+        .map(row => ({
+          meal: normalizeTextValue(row.querySelector(".protein-entry-meal")?.value).trim(),
+          food: normalizeTextValue(row.querySelector(".protein-entry-food")?.value).trim(),
+          amount: normalizeTextValue(row.querySelector(".protein-entry-amount")?.value).trim(),
+        }))
+        .filter(item => item.meal || item.food || item.amount);
+    }
+
+    function renderProteinEntryRows(entries) {
+      const rowsContainer = document.getElementById("proteinEntryRows");
+      const suggestionList = document.getElementById("proteinMealSuggestions");
+      suggestionList.innerHTML = buildProteinMealSuggestionsHtml();
+      rowsContainer.innerHTML = "";
+
+      const list = Array.isArray(entries) ? entries : [];
+      list.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "protein-entry-row";
+        row.innerHTML = `
+          <input class="protein-entry-meal" list="proteinMealSuggestions" placeholder="項目（早餐/午餐/晚餐或自定義）" value="${escapeHtml(item.meal || "")}" />
+          <input class="protein-entry-food" type="text" placeholder="食物" value="${escapeHtml(item.food || "")}" />
+          <input class="protein-entry-amount" type="number" min="0" step="0.1" placeholder="蛋白質(g)" value="${escapeHtml(item.amount || "")}" />
+          <button type="button" class="remove-protein-btn" onclick="removeProteinEntryRow(this)">刪除</button>
+        `;
+        rowsContainer.appendChild(row);
+      });
+
+      rowsContainer.querySelectorAll(".protein-entry-meal, .protein-entry-food, .protein-entry-amount").forEach(input => {
+        input.addEventListener("input", updateProteinTotalDisplay);
+      });
+    }
+
+    function addProteinEntryRow() {
+      const current = collectProteinEntriesFromForm();
+      current.push(createEmptyProteinEntry());
+      renderProteinEntryRows(current);
+      updateProteinTotalDisplay();
+    }
+
+    function removeProteinEntryRow(buttonEl) {
+      const row = buttonEl.closest(".protein-entry-row");
+      if (row) {
+        row.remove();
+      }
+      updateProteinTotalDisplay();
+    }
+
+    function updateProteinTotalDisplay() {
+      const totalEl = document.getElementById("proteinTotalDisplay");
+      if (!totalEl) return;
+
+      const entries = collectProteinEntriesFromForm();
+      const totalText = getProteinTotalTextFromEntries(entries);
+      totalEl.textContent = totalText ? `總計：${totalText} g` : "總計：-";
+    }
+
     function renderExerciseRows(exercises) {
       const rowsContainer = document.getElementById("exerciseRows");
+      const suggestionList = document.getElementById("exerciseSuggestions");
+      suggestionList.innerHTML = buildExerciseSuggestionsHtml();
       rowsContainer.innerHTML = "";
 
       exercises.forEach(exercise => {
         const row = document.createElement("div");
         row.className = "exercise-row";
         row.innerHTML = `
-          <select class="exercise-name">${buildExerciseOptionsHtml(exercise.name)}</select>
+          <input class="exercise-name" list="exerciseSuggestions" placeholder="訓練名稱（可自訂）" value="${escapeHtml(exercise.name)}" />
+          <input class="exercise-load" type="number" min="0" step="0.5" placeholder="重量(kg)" value="${escapeHtml(exercise.load)}" />
           <input class="exercise-reps" type="number" min="1" step="1" placeholder="每組幾下" value="${escapeHtml(exercise.reps)}" />
           <input class="exercise-sets" type="number" min="1" step="1" placeholder="幾組" value="${escapeHtml(exercise.sets)}" />
           <button type="button" class="remove-ex-btn" onclick="removeExerciseRow(this)">刪除</button>
@@ -1139,13 +1588,23 @@
       renderExerciseRows(entry.exercises);
       document.getElementById("weight").value = entry.weight;
       document.getElementById("bodyFat").value = entry.bodyFat;
+      renderProteinEntryRows(entry.proteinEntries);
+      updateProteinTotalDisplay();
       document.getElementById("note").value = entry.note;
 
+      lockedScrollY = window.scrollY || window.pageYOffset || 0;
+      document.documentElement.classList.add("modal-open");
+      document.body.classList.add("modal-open");
+      document.body.style.top = `-${lockedScrollY}px`;
       document.getElementById("modalBackdrop").classList.add("show");
     }
 
     function closeModal() {
       document.getElementById("modalBackdrop").classList.remove("show");
+      document.documentElement.classList.remove("modal-open");
+      document.body.classList.remove("modal-open");
+      document.body.style.top = "";
+      window.scrollTo(0, lockedScrollY);
       currentEditing.person = null;
       currentEditing.dateKey = null;
     }
@@ -1154,12 +1613,20 @@
       const { person, dateKey } = currentEditing;
       if (!person || !dateKey) return;
 
+      const proteinEntries = collectProteinEntriesFromForm();
+
       records[person][dateKey] = {
         exercises: collectExercisesFromForm(),
         weight: document.getElementById("weight").value.trim(),
         bodyFat: document.getElementById("bodyFat").value.trim(),
+        proteinEntries,
+        protein: getProteinTotalTextFromEntries(proteinEntries),
         note: document.getElementById("note").value.trim(),
       };
+
+      if (!hasWorkoutOnEntry(records[person][dateKey])) {
+        delete records[person][dateKey];
+      }
 
       persistRecords();
       renderCalendars();
@@ -1208,6 +1675,14 @@
       }
     });
 
+    document.getElementById("modalBackdrop").addEventListener("touchmove", function (e) {
+      if (e.target === this) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    document.getElementById("proteinEntryRows").addEventListener("input", updateProteinTotalDisplay);
+
     async function bootstrap() {
       renderWeekdays();
       renderCalendars();
@@ -1242,6 +1717,9 @@
     window.saveRecord = saveRecord;
     window.addBoardMessage = addBoardMessage;
     window.removeBoardMessage = removeBoardMessage;
+    window.updateProteinTotalDisplay = updateProteinTotalDisplay;
+    window.addProteinEntryRow = addProteinEntryRow;
+    window.removeProteinEntryRow = removeProteinEntryRow;
   </script>
 </body>
 </html>
