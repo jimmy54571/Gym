@@ -1417,18 +1417,24 @@
       renderMessageBoard("girlfriend", "boardListGf");
     }
 
-    function hasWorkoutOnEntry(entry) {
+    function hasAnyEntryData(entry) {
       if (!entry) return false;
       const normalized = normalizeEntry(entry);
       const hasProteinEntries = (normalized.proteinEntries || []).some(item => item.meal || item.food || item.amount);
       return normalized.exercises.some(item => item.name || item.load) || !!normalized.note || !!normalized.inbody || !!normalized.protein || hasProteinEntries;
     }
 
+    function hasGymWorkoutOnEntry(entry) {
+      if (!entry) return false;
+      const normalized = normalizeEntry(entry);
+      return normalized.exercises.some(item => item.name || item.load || item.sets || item.reps);
+    }
+
     function cleanupWorkoutRecords() {
       ["me", "girlfriend"].forEach(personKey => {
         const personRecords = records[personKey] || {};
         Object.keys(personRecords).forEach(dateKey => {
-          if (!hasWorkoutOnEntry(personRecords[dateKey])) {
+          if (!hasAnyEntryData(personRecords[dateKey])) {
             delete personRecords[dateKey];
           }
         });
@@ -1437,7 +1443,7 @@
 
     function getWorkoutDateKeys(personKey) {
       return Object.keys(records[personKey] || {})
-        .filter(dateKey => hasWorkoutOnEntry(records[personKey][dateKey]))
+        .filter(dateKey => hasGymWorkoutOnEntry(records[personKey][dateKey]))
         .sort();
     }
 
@@ -2018,7 +2024,7 @@
         note: document.getElementById("note").value.trim(),
       };
 
-      if (!hasWorkoutOnEntry(records[person][dateKey])) {
+      if (!hasAnyEntryData(records[person][dateKey])) {
         delete records[person][dateKey];
       }
 
