@@ -1093,42 +1093,7 @@
       messagingSenderId: "11716782851",
       appId: "1:11716782851:web:04de6c31587eb79e241736",
     };
-    const EXERCISE_OPTIONS = [
-      "槓鈴深蹲",
-      "前蹲舉",
-      "腿推",
-      "硬舉",
-      "羅馬尼亞硬舉",
-      "臀推",
-      "弓箭步",
-      "臥推",
-      "上斜臥推",
-      "啞鈴飛鳥",
-      "伏地挺身",
-      "肩推",
-      "側平舉",
-      "後三角飛鳥",
-      "引體向上",
-      "高位下拉",
-      "槓鈴划船",
-      "坐姿划船",
-      "二頭彎舉",
-      "三頭下壓",
-      "腹肌滾輪",
-      "棒式",
-      "跑步",
-      "飛輪",
-      "划步機"
-    ];
-    const PROTEIN_MEAL_OPTIONS = ["早餐", "午餐", "晚餐"];
-    const BASE_EXERCISE_ORDER = EXERCISE_OPTIONS.reduce((acc, name, index) => {
-      acc[name] = index;
-      return acc;
-    }, {});
-    const BASE_PROTEIN_MEAL_ORDER = PROTEIN_MEAL_OPTIONS.reduce((acc, name, index) => {
-      acc[name] = index;
-      return acc;
-    }, {});
+    const PROTEIN_MEAL_OPTIONS = [];
 
     let db = null;
     let cloudDocRef = null;
@@ -1690,17 +1655,37 @@
       return Number.isFinite(num) ? num : null;
     }
 
-    function getHistoryExerciseOptions(personKey) {
-      const options = new Set();
-      Object.values(records[personKey] || {}).forEach(entry => {
-        const normalized = normalizeEntry(entry);
-        normalized.exercises.forEach(item => {
-          const name = normalizeTextValue(item.name).trim();
-          if (name) options.add(name);
+    function getExerciseUsageMap(personKeys = ["me", "girlfriend"]) {
+      const usageMap = new Map();
+
+      personKeys.forEach(personKey => {
+        Object.values(records[personKey] || {}).forEach(entry => {
+          const normalized = normalizeEntry(entry);
+          normalized.exercises.forEach(exercise => {
+            const name = normalizeTextValue(exercise.name).trim();
+            if (!name) return;
+            usageMap.set(name, (usageMap.get(name) || 0) + 1);
+          });
         });
       });
 
-      return Array.from(options).sort((a, b) => a.localeCompare(b, "zh-Hant"));
+      return usageMap;
+    }
+
+    function sortExerciseNamesByUsage(usageMap) {
+      return Array.from(usageMap.keys()).sort((a, b) => {
+        const countDiff = (usageMap.get(b) || 0) - (usageMap.get(a) || 0);
+        if (countDiff !== 0) {
+          return countDiff;
+        }
+
+        return a.localeCompare(b, "zh-Hant");
+      });
+    }
+
+    function getHistoryExerciseOptions(personKey) {
+      const usageMap = getExerciseUsageMap([personKey]);
+      return sortExerciseNamesByUsage(usageMap);
     }
 
     function renderHistoryExerciseOptions() {
@@ -1714,6 +1699,38 @@
 
       if (previous && options.includes(previous)) {
         exerciseSelect.value = previous;
+      }
+    }
+
+    function getHistoryPersonOptions() {
+      const people = [
+        { key: "me", label: "Jimmy" },
+        { key: "girlfriend", label: "Celine" },
+      ];
+
+      const usage = people
+        .map(item => ({
+          ...item,
+          count: Object.keys(records[item.key] || {}).length,
+        }))
+        .filter(item => item.count > 0)
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "zh-Hant"));
+
+      return usage.length ? usage : people;
+    }
+
+    function renderHistoryPersonOptions() {
+      const personSelect = document.getElementById("historyPerson");
+      if (!personSelect) return;
+
+      const previous = personSelect.value;
+      const options = getHistoryPersonOptions();
+      personSelect.innerHTML = options
+        .map(item => `<option value="${item.key}">${escapeHtml(item.label)}</option>`)
+        .join("");
+
+      if (previous && options.some(item => item.key === previous)) {
+        personSelect.value = previous;
       }
     }
 
@@ -1892,6 +1909,8 @@
       const exercise = document.getElementById("historyExercise");
       const aggregate = document.getElementById("historyAggregate");
       if (!person || !metric || !exercise || !aggregate) return;
+
+      renderHistoryPersonOptions();
 
       [person, metric, exercise, aggregate].forEach(el => {
         el.addEventListener("change", renderHistoryChart);
@@ -2073,45 +2092,8 @@
     }
 
     function getSortedExerciseOptions() {
-      const usageMap = new Map();
-      const addUsage = (name) => {
-        const normalizedName = normalizeTextValue(name).trim();
-        if (!normalizedName) return;
-        usageMap.set(normalizedName, (usageMap.get(normalizedName) || 0) + 1);
-      };
-
-      ["me", "girlfriend"].forEach(personKey => {
-        Object.values(records[personKey] || {}).forEach(entry => {
-          const normalized = normalizeEntry(entry);
-          normalized.exercises.forEach(exercise => addUsage(exercise.name));
-        });
-      });
-
-      EXERCISE_OPTIONS.forEach(name => {
-        if (!usageMap.has(name)) {
-          usageMap.set(name, 0);
-        }
-      });
-
-      return Array.from(usageMap.keys()).sort((a, b) => {
-        const countDiff = (usageMap.get(b) || 0) - (usageMap.get(a) || 0);
-        if (countDiff !== 0) {
-          return countDiff;
-        }
-
-        const aBaseIndex = BASE_EXERCISE_ORDER[a];
-        const bBaseIndex = BASE_EXERCISE_ORDER[b];
-        const aInBase = aBaseIndex !== undefined;
-        const bInBase = bBaseIndex !== undefined;
-
-        if (aInBase && bInBase) {
-          return aBaseIndex - bBaseIndex;
-        }
-
-        if (aInBase) return -1;
-        if (bInBase) return 1;
-        return a.localeCompare(b, "zh-Hant");
-      });
+      const usageMap = getExerciseUsageMap();
+      return sortExerciseNamesByUsage(usageMap);
     }
 
     function formatExerciseLine(exercise) {
@@ -2151,29 +2133,13 @@
         });
       });
 
-      PROTEIN_MEAL_OPTIONS.forEach(name => {
-        if (!usageMap.has(name)) {
-          usageMap.set(name, 0);
-        }
-      });
+      PROTEIN_MEAL_OPTIONS.forEach(name => addUsage(name));
 
       return Array.from(usageMap.keys()).sort((a, b) => {
         const countDiff = (usageMap.get(b) || 0) - (usageMap.get(a) || 0);
         if (countDiff !== 0) {
           return countDiff;
         }
-
-        const aBaseIndex = BASE_PROTEIN_MEAL_ORDER[a];
-        const bBaseIndex = BASE_PROTEIN_MEAL_ORDER[b];
-        const aInBase = aBaseIndex !== undefined;
-        const bInBase = bBaseIndex !== undefined;
-
-        if (aInBase && bInBase) {
-          return aBaseIndex - bBaseIndex;
-        }
-
-        if (aInBase) return -1;
-        if (bInBase) return 1;
         return a.localeCompare(b, "zh-Hant");
       });
     }
@@ -2378,7 +2344,6 @@
     function addExerciseRow() {
       const name = normalizeTextValue(document.getElementById("exerciseNameInput")?.value).trim();
       if (name) {
-        ensureOptionExists(EXERCISE_OPTIONS, name);
         renderExerciseInputOptions();
       }
 
