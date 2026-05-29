@@ -75,6 +75,26 @@
       font-size: 15px;
     }
 
+    .cloud-actions {
+      margin-top: 12px;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .cloud-upload-btn {
+      background: #22c55e;
+      color: #052e16;
+      font-weight: bold;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .cloud-upload-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
     .container {
       display: flex;
       gap: 20px;
@@ -782,6 +802,9 @@
     <div class="title-box">
       <h1>健身紀錄日曆</h1>
       <p>Jimmy 和 Celine 的單頁健身網站｜點日期可新增或修改訓練紀錄｜<span id="syncStatus">同步：本機模式</span></p>
+      <div class="cloud-actions">
+        <button id="uploadLocalBtn" class="cloud-upload-btn" onclick="uploadLocalStorageToCloudFromUI()">把這台資料上傳到雲端（一次）</button>
+      </div>
     </div>
 
     <div class="container">
@@ -1062,6 +1085,39 @@
       return Object.values(FIREBASE_CONFIG).every(Boolean);
     }
 
+    function getFirebaseErrorMessage(error) {
+      if (!error) return "未知錯誤";
+
+      const code = normalizeTextValue(error.code).trim();
+      const message = normalizeTextValue(error.message).trim();
+
+      if (code === "permission-denied") {
+        return "Firestore 規則拒絕存取（permission-denied）";
+      }
+
+      if (code === "unavailable") {
+        return "Firebase 服務暫時不可用（unavailable）";
+      }
+
+      if (code === "failed-precondition") {
+        return "Firebase 專案設定不完整或索引/服務未啟用（failed-precondition）";
+      }
+
+      if (code === "unauthenticated") {
+        return "需要登入驗證（unauthenticated）";
+      }
+
+      if (code === "invalid-argument") {
+        return "傳入的資料格式無效（invalid-argument）";
+      }
+
+      if (code) {
+        return `${code}${message ? `: ${message}` : ""}`;
+      }
+
+      return message || "未知錯誤";
+    }
+
     function hasAnyData(data) {
       const hasWorkoutRecords = Object.keys(data.me || {}).length > 0 || Object.keys(data.girlfriend || {}).length > 0;
       const hasMessages = (data.messageBoard?.me?.length || 0) > 0 || (data.messageBoard?.girlfriend?.length || 0) > 0;
@@ -1078,6 +1134,11 @@
         return;
       }
 
+      if (window.location.protocol === "file:") {
+        updateSyncStatus("同步：本機模式（請改用 http/https 啟動，例如 Live Server）");
+        return;
+      }
+
       try {
         const app = initializeApp(FIREBASE_CONFIG);
         db = getFirestore(app);
@@ -1085,7 +1146,8 @@
         isCloudEnabled = true;
         updateSyncStatus("同步：連線中...");
       } catch (error) {
-        updateSyncStatus("同步：Firebase 初始化失敗");
+        console.error("Firebase 初始化失敗", error);
+        updateSyncStatus(`同步：Firebase 初始化失敗（${getFirebaseErrorMessage(error)}）`);
       }
     }
 
@@ -1107,7 +1169,8 @@
         updateSyncStatus("同步：雲端已連線");
         return data;
       } catch (error) {
-        updateSyncStatus("同步：讀取雲端失敗，使用本機");
+        console.error("讀取 Firebase 失敗", error);
+        updateSyncStatus(`同步：讀取雲端失敗（${getFirebaseErrorMessage(error)}），使用本機`);
         return null;
       }
     }
@@ -1121,7 +1184,71 @@
         await setDoc(cloudDocRef, sanitizeRecordsForSave());
         updateSyncStatus("同步：已更新到雲端");
       } catch (error) {
-        updateSyncStatus("同步：寫入雲端失敗（已保留本機）");
+        console.error("寫入 Firebase 失敗", error);
+        updateSyncStatus(`同步：寫入雲端失敗（${getFirebaseErrorMessage(error)}），已保留本機`);
+      }
+    }
+
+    async function uploadLocalStorageToCloudOnce() {
+      if (!isCloudEnabled || !cloudDocRef) {
+        updateSyncStatus("同步：尚未連上雲端，無法上傳本機資料");
+        return false;
+      }
+
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        updateSyncStatus("同步：本機沒有可上傳資料");
+        return false;
+      }
+
+      let localData = null;
+      try {
+        localData = normalizeRecordsRoot(JSON.parse(raw));
+      } catch (error) {
+        console.error("本機資料格式錯誤", error);
+        updateSyncStatus("同步：本機資料格式錯誤，無法上傳");
+        return false;
+      }
+
+      if (!hasAnyData(localData)) {
+        updateSyncStatus("同步：本機資料為空，未上傳");
+        return false;
+      }
+
+      try {
+        await setDoc(cloudDocRef, localData);
+        records = localData;
+        persistLocalRecords();
+        renderCalendars();
+        isCloudLoaded = true;
+        updateSyncStatus("同步：已將本機資料覆蓋上傳到雲端");
+        return true;
+      } catch (error) {
+        console.error("上傳本機資料到 Firebase 失敗", error);
+        updateSyncStatus(`同步：上傳本機資料失敗（${getFirebaseErrorMessage(error)}）`);
+        return false;
+      }
+    }
+
+    async function uploadLocalStorageToCloudFromUI() {
+      const confirmed = window.confirm("要把這台裝置目前的本機資料覆蓋到雲端嗎？");
+      if (!confirmed) {
+        return;
+      }
+
+      const btn = document.getElementById("uploadLocalBtn");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "上傳中...";
+      }
+
+      try {
+        await uploadLocalStorageToCloudOnce();
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "把這台資料上傳到雲端（一次）";
+        }
       }
     }
 
@@ -2120,6 +2247,8 @@
     window.removeProteinEntryRow = removeProteinEntryRow;
     window.removeExerciseAt = removeExerciseAt;
     window.removeProteinAt = removeProteinAt;
+    window.uploadLocalStorageToCloudOnce = uploadLocalStorageToCloudOnce;
+    window.uploadLocalStorageToCloudFromUI = uploadLocalStorageToCloudFromUI;
   </script>
 </body>
 </html>
