@@ -941,7 +941,6 @@
     const STORAGE_KEY = "fitness-calendar-records-v1";
     const FIREBASE_COLLECTION = "fitnessCalendar";
     const FIREBASE_DOC_ID = "sharedRecords";
-    const AUTO_PULL_FROM_CLOUD = false;
     const BOARD_LIMIT = 20;
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyA4LjlhkQHv20Jxmmm0myvFBD7pBNX8eF0",
@@ -2214,16 +2213,6 @@
       renderCalendars();
 
       await initFirebaseSync();
-
-      if (!isCloudEnabled) {
-        return;
-      }
-
-      if (!AUTO_PULL_FROM_CLOUD) {
-        updateSyncStatus("同步：雲端已連線（安全模式：不自動下載）");
-        return;
-      }
-
       const cloudData = await loadCloudRecords();
 
       if (!cloudData) {
