@@ -75,6 +75,35 @@
       font-size: 15px;
     }
 
+    .page-switch {
+      margin-top: 14px;
+      display: inline-flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .page-switch-btn {
+      background: rgba(51, 65, 85, 0.9);
+      color: #e2e8f0;
+      border: 1px solid var(--line);
+      font-weight: bold;
+    }
+
+    .page-switch-btn.active {
+      background: var(--accent);
+      color: #111827;
+      border-color: transparent;
+    }
+
+    .page-panel {
+      display: none;
+    }
+
+    .page-panel.active {
+      display: block;
+    }
+
     .container {
       display: flex;
       gap: 20px;
@@ -378,6 +407,66 @@
       background: #0ea5e9;
       color: white;
       font-weight: bold;
+    }
+
+    .history-section {
+      width: 100%;
+    }
+
+    .history-controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .history-controls .form-group {
+      margin-bottom: 0;
+    }
+
+    .history-summary {
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+
+    .chart-wrap {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(15, 23, 42, 0.7);
+      min-height: 280px;
+    }
+
+    .history-table-wrap {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.7);
+      overflow: hidden;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .history-table th,
+    .history-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+    }
+
+    .history-table th {
+      color: var(--accent);
+      background: rgba(30, 41, 59, 0.82);
+      font-weight: bold;
+    }
+
+    .history-empty {
+      color: var(--muted);
+      text-align: center;
     }
 
     .modal-backdrop {
@@ -739,6 +828,10 @@
         grid-template-columns: 1fr;
       }
 
+      .history-controls {
+        grid-template-columns: 1fr;
+      }
+
       .day {
         min-height: 86px;
       }
@@ -782,70 +875,142 @@
     <div class="title-box">
       <h1>健身紀錄日曆</h1>
       <p>Jimmy 和 Celine 的單頁健身網站｜點日期可新增或修改訓練紀錄｜<span id="syncStatus">同步：本機模式</span></p>
+      <div class="page-switch">
+        <button id="btnPageCalendar" class="page-switch-btn active" onclick="switchPage('calendar')">日曆頁</button>
+        <button id="btnPageHistory" class="page-switch-btn" onclick="switchPage('history')">歷史圖表頁</button>
+      </div>
     </div>
 
-    <div class="container">
-      <div class="section">
-        <div class="section-header">
-          <div class="name-tag">
-            <span class="dot me"></span>
-            <span>Jimmy</span>
+    <div id="calendarPage" class="page-panel active">
+      <div class="container">
+        <div class="section">
+          <div class="section-header">
+            <div class="name-tag">
+              <span class="dot me"></span>
+              <span>Jimmy</span>
+            </div>
+            <div class="month-nav">
+              <button class="nav-btn" onclick="changeMonth(-1)">◀</button>
+              <div id="monthLabelMe" class="month-label"></div>
+              <button class="nav-btn" onclick="changeMonth(1)">▶</button>
+            </div>
           </div>
-          <div class="month-nav">
-            <button class="nav-btn" onclick="changeMonth(-1)">◀</button>
-            <div id="monthLabelMe" class="month-label"></div>
-            <button class="nav-btn" onclick="changeMonth(1)">▶</button>
+
+          <div id="gamifyMe" class="gamify-box"></div>
+
+          <div class="weekdays" id="weekdaysMe"></div>
+          <div class="calendar-grid" id="calendarMe"></div>
+
+          <div class="hint-box">
+            <div class="board-title">Jimmy 留言板</div>
+            <div id="boardListMe" class="board-list"></div>
+            <div class="board-input-row">
+              <select id="boardAuthorMe">
+                <option value="Jimmy">Jimmy</option>
+                <option value="Celine">Celine</option>
+              </select>
+              <input id="boardInputMe" type="text" maxlength="80" placeholder="給 Jimmy 的一句話..." />
+              <button class="board-btn" onclick="addBoardMessage('me')">送出</button>
+            </div>
           </div>
         </div>
 
-        <div id="gamifyMe" class="gamify-box"></div>
+        <div class="section">
+          <div class="section-header">
+            <div class="name-tag">
+              <span class="dot gf"></span>
+              <span>Celine</span>
+            </div>
+            <div class="month-nav">
+              <button class="nav-btn" onclick="changeMonth(-1)">◀</button>
+              <div id="monthLabelGf" class="month-label"></div>
+              <button class="nav-btn" onclick="changeMonth(1)">▶</button>
+            </div>
+          </div>
 
-        <div class="weekdays" id="weekdaysMe"></div>
-        <div class="calendar-grid" id="calendarMe"></div>
+          <div id="gamifyGf" class="gamify-box"></div>
 
-        <div class="hint-box">
-          <div class="board-title">Jimmy 留言板</div>
-          <div id="boardListMe" class="board-list"></div>
-          <div class="board-input-row">
-            <select id="boardAuthorMe">
-              <option value="Jimmy">Jimmy</option>
-              <option value="Celine">Celine</option>
-            </select>
-            <input id="boardInputMe" type="text" maxlength="80" placeholder="給 Jimmy 的一句話..." />
-            <button class="board-btn" onclick="addBoardMessage('me')">送出</button>
+          <div class="weekdays" id="weekdaysGf"></div>
+          <div class="calendar-grid" id="calendarGf"></div>
+
+          <div class="hint-box">
+            <div class="board-title">Celine 留言板</div>
+            <div id="boardListGf" class="board-list"></div>
+            <div class="board-input-row">
+              <select id="boardAuthorGf">
+                <option value="Jimmy">Jimmy</option>
+                <option value="Celine" selected>Celine</option>
+              </select>
+              <input id="boardInputGf" type="text" maxlength="80" placeholder="給 Celine 的一句話..." />
+              <button class="board-btn" onclick="addBoardMessage('girlfriend')">送出</button>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="section">
+    <div id="historyPage" class="page-panel">
+      <div class="section history-section">
         <div class="section-header">
           <div class="name-tag">
-            <span class="dot gf"></span>
-            <span>Celine</span>
-          </div>
-          <div class="month-nav">
-            <button class="nav-btn" onclick="changeMonth(-1)">◀</button>
-            <div id="monthLabelGf" class="month-label"></div>
-            <button class="nav-btn" onclick="changeMonth(1)">▶</button>
+            <span>歷史紀錄趨勢圖</span>
           </div>
         </div>
 
-        <div id="gamifyGf" class="gamify-box"></div>
-
-        <div class="weekdays" id="weekdaysGf"></div>
-        <div class="calendar-grid" id="calendarGf"></div>
-
-        <div class="hint-box">
-          <div class="board-title">Celine 留言板</div>
-          <div id="boardListGf" class="board-list"></div>
-          <div class="board-input-row">
-            <select id="boardAuthorGf">
-              <option value="Jimmy">Jimmy</option>
-              <option value="Celine" selected>Celine</option>
+        <div class="history-controls">
+          <div class="form-group">
+            <label for="historyPerson">人物</label>
+            <select id="historyPerson">
+              <option value="me">Jimmy</option>
+              <option value="girlfriend">Celine</option>
             </select>
-            <input id="boardInputGf" type="text" maxlength="80" placeholder="給 Celine 的一句話..." />
-            <button class="board-btn" onclick="addBoardMessage('girlfriend')">送出</button>
           </div>
+
+          <div class="form-group">
+            <label for="historyMetric">指標</label>
+            <select id="historyMetric">
+              <option value="exerciseLoad">訓練重量 (kg)</option>
+              <option value="exerciseReps">訓練次數 (reps)</option>
+              <option value="exerciseSets">訓練組數 (sets)</option>
+              <option value="proteinTotal">蛋白質總攝取 (g)</option>
+              <option value="inbodyWeight">InBody 體重 (kg)</option>
+              <option value="inbodyBodyFat">InBody 體脂 (%)</option>
+              <option value="inbodyMuscle">InBody 骨骼肌量 (kg)</option>
+              <option value="inbodyBmr">InBody 基礎代謝 (kcal)</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="historyExerciseGroup">
+            <label for="historyExercise">訓練項目</label>
+            <select id="historyExercise"></select>
+          </div>
+
+          <div class="form-group" id="historyAggregateGroup">
+            <label for="historyAggregate">同日彙整</label>
+            <select id="historyAggregate">
+              <option value="avg">平均值</option>
+              <option value="max">最大值</option>
+              <option value="sum">總和</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="historySummary" class="hint-box history-summary">請先選擇想看的指標。</div>
+
+        <div class="chart-wrap">
+          <canvas id="historyChart"></canvas>
+        </div>
+
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>數值</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -910,6 +1075,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
@@ -977,6 +1143,9 @@
       person: null,
       dateKey: null,
     };
+
+    let activePage = "calendar";
+    let historyChart = null;
 
     let lockedScrollY = 0;
 
@@ -1497,6 +1666,239 @@
       renderGamificationPanel("girlfriend", "gamifyGf", "Celine");
       renderMessageBoard("me", "boardListMe");
       renderMessageBoard("girlfriend", "boardListGf");
+      renderHistoryChart();
+    }
+
+    function switchPage(pageName) {
+      activePage = pageName;
+
+      const isCalendar = pageName === "calendar";
+      document.getElementById("calendarPage").classList.toggle("active", isCalendar);
+      document.getElementById("historyPage").classList.toggle("active", !isCalendar);
+      document.getElementById("btnPageCalendar").classList.toggle("active", isCalendar);
+      document.getElementById("btnPageHistory").classList.toggle("active", !isCalendar);
+
+      if (!isCalendar) {
+        renderHistoryChart();
+      }
+    }
+
+    function parseNumberOrNull(value) {
+      const text = normalizeTextValue(value).trim();
+      if (!text) return null;
+      const num = Number(text);
+      return Number.isFinite(num) ? num : null;
+    }
+
+    function getHistoryExerciseOptions(personKey) {
+      const options = new Set();
+      Object.values(records[personKey] || {}).forEach(entry => {
+        const normalized = normalizeEntry(entry);
+        normalized.exercises.forEach(item => {
+          const name = normalizeTextValue(item.name).trim();
+          if (name) options.add(name);
+        });
+      });
+
+      return Array.from(options).sort((a, b) => a.localeCompare(b, "zh-Hant"));
+    }
+
+    function renderHistoryExerciseOptions() {
+      const personSelect = document.getElementById("historyPerson");
+      const exerciseSelect = document.getElementById("historyExercise");
+      if (!personSelect || !exerciseSelect) return;
+
+      const previous = exerciseSelect.value;
+      const options = getHistoryExerciseOptions(personSelect.value);
+      exerciseSelect.innerHTML = options.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+
+      if (previous && options.includes(previous)) {
+        exerciseSelect.value = previous;
+      }
+    }
+
+    function aggregateNumbers(numbers, mode) {
+      if (!numbers.length) return null;
+      if (mode === "sum") return numbers.reduce((sum, n) => sum + n, 0);
+      if (mode === "max") return Math.max(...numbers);
+      return numbers.reduce((sum, n) => sum + n, 0) / numbers.length;
+    }
+
+    function getHistorySeries(personKey, metricKey, exerciseName, aggregateMode) {
+      const dateKeys = Object.keys(records[personKey] || {}).sort();
+      const labels = [];
+      const values = [];
+
+      const fieldMap = {
+        exerciseLoad: "load",
+        exerciseReps: "reps",
+        exerciseSets: "sets",
+      };
+
+      dateKeys.forEach(dateKey => {
+        const normalized = normalizeEntry(records[personKey][dateKey]);
+        let value = null;
+
+        if (fieldMap[metricKey]) {
+          if (!exerciseName) return;
+
+          const numbers = normalized.exercises
+            .filter(item => normalizeTextValue(item.name).trim() === exerciseName)
+            .map(item => parseNumberOrNull(item[fieldMap[metricKey]]))
+            .filter(num => num !== null);
+
+          value = aggregateNumbers(numbers, aggregateMode);
+        } else if (metricKey === "proteinTotal") {
+          const total = getProteinEntriesTotal(normalized.proteinEntries);
+          value = total > 0 ? total : null;
+        } else {
+          const inbodyFieldMap = {
+            inbodyWeight: "weight",
+            inbodyBodyFat: "bodyFat",
+            inbodyMuscle: "muscle",
+            inbodyBmr: "bmr",
+          };
+          value = parseNumberOrNull(normalized.inbodyMetrics?.[inbodyFieldMap[metricKey]]);
+        }
+
+        if (value === null) return;
+
+        labels.push(dateKey);
+        values.push(Math.round(value * 100) / 100);
+      });
+
+      return { labels, values };
+    }
+
+    function getMetricLabel(metricKey) {
+      const map = {
+        exerciseLoad: "訓練重量 (kg)",
+        exerciseReps: "訓練次數 (reps)",
+        exerciseSets: "訓練組數 (sets)",
+        proteinTotal: "蛋白質總攝取 (g)",
+        inbodyWeight: "InBody 體重 (kg)",
+        inbodyBodyFat: "InBody 體脂 (%)",
+        inbodyMuscle: "InBody 骨骼肌量 (kg)",
+        inbodyBmr: "InBody 基礎代謝 (kcal)",
+      };
+      return map[metricKey] || metricKey;
+    }
+
+    function renderHistoryTable(labels, values) {
+      const body = document.getElementById("historyTableBody");
+      if (!body) return;
+
+      if (!labels.length) {
+        body.innerHTML = `<tr><td class="history-empty" colspan="2">目前沒有可顯示的歷史資料。</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = labels
+        .map((date, idx) => `<tr><td>${escapeHtml(date)}</td><td>${escapeHtml(String(values[idx]))}</td></tr>`)
+        .join("");
+    }
+
+    function renderHistorySummary(labels, values, metricLabel, personLabel, exerciseName) {
+      const summary = document.getElementById("historySummary");
+      if (!summary) return;
+
+      if (!labels.length) {
+        summary.textContent = `${personLabel} 的 ${metricLabel}${exerciseName ? `（${exerciseName}）` : ""} 目前沒有資料。`;
+        return;
+      }
+
+      const lastIndex = labels.length - 1;
+      summary.textContent = `${personLabel}｜${metricLabel}${exerciseName ? `｜${exerciseName}` : ""}｜共 ${labels.length} 筆，最新 ${labels[lastIndex]}：${values[lastIndex]}`;
+    }
+
+    function renderHistoryChart() {
+      const personSelect = document.getElementById("historyPerson");
+      const metricSelect = document.getElementById("historyMetric");
+      const exerciseSelect = document.getElementById("historyExercise");
+      const aggregateSelect = document.getElementById("historyAggregate");
+      const exerciseGroup = document.getElementById("historyExerciseGroup");
+      const aggregateGroup = document.getElementById("historyAggregateGroup");
+      const canvas = document.getElementById("historyChart");
+
+      if (!personSelect || !metricSelect || !exerciseSelect || !aggregateSelect || !exerciseGroup || !aggregateGroup || !canvas) {
+        return;
+      }
+
+      const metricKey = metricSelect.value;
+      const isExerciseMetric = metricKey.startsWith("exercise");
+      exerciseGroup.style.display = isExerciseMetric ? "block" : "none";
+      aggregateGroup.style.display = isExerciseMetric ? "block" : "none";
+
+      renderHistoryExerciseOptions();
+      const exerciseName = isExerciseMetric ? exerciseSelect.value : "";
+      const personKey = personSelect.value;
+      const personLabel = personKey === "me" ? "Jimmy" : "Celine";
+      const metricLabel = getMetricLabel(metricKey);
+      const { labels, values } = getHistorySeries(personKey, metricKey, exerciseName, aggregateSelect.value);
+
+      renderHistorySummary(labels, values, metricLabel, personLabel, exerciseName);
+      renderHistoryTable(labels, values);
+
+      if (historyChart) {
+        historyChart.destroy();
+        historyChart = null;
+      }
+
+      if (!window.Chart) {
+        return;
+      }
+
+      historyChart = new window.Chart(canvas, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: `${personLabel}｜${metricLabel}${exerciseName ? `｜${exerciseName}` : ""}`,
+            data: values,
+            borderColor: personKey === "me" ? "#60a5fa" : "#f472b6",
+            backgroundColor: personKey === "me" ? "rgba(59, 130, 246, 0.2)" : "rgba(236, 72, 153, 0.2)",
+            tension: 0.25,
+            pointRadius: 4,
+            fill: true,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: "#f8fafc",
+              },
+            },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#cbd5e1" },
+              grid: { color: "rgba(255,255,255,0.08)" },
+            },
+            y: {
+              ticks: { color: "#cbd5e1" },
+              grid: { color: "rgba(255,255,255,0.08)" },
+            },
+          },
+        },
+      });
+    }
+
+    function initHistoryControls() {
+      const person = document.getElementById("historyPerson");
+      const metric = document.getElementById("historyMetric");
+      const exercise = document.getElementById("historyExercise");
+      const aggregate = document.getElementById("historyAggregate");
+      if (!person || !metric || !exercise || !aggregate) return;
+
+      [person, metric, exercise, aggregate].forEach(el => {
+        el.addEventListener("change", renderHistoryChart);
+      });
+
+      renderHistoryExerciseOptions();
+      renderHistoryChart();
     }
 
     function hasAnyEntryData(entry) {
@@ -2166,6 +2568,7 @@
     async function bootstrap() {
       renderWeekdays();
       renderCalendars();
+      initHistoryControls();
 
       await initFirebaseSync();
       const cloudData = await loadCloudRecords();
@@ -2190,6 +2593,7 @@
 
     // 把需要被 HTML onclick 呼叫的函式掛到 window（module scope 限制）
     window.changeMonth = changeMonth;
+    window.switchPage = switchPage;
     window.addExerciseRow = addExerciseRow;
     window.removeExerciseRow = removeExerciseRow;
     window.deleteRecord = deleteRecord;
