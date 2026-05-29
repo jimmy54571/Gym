@@ -75,26 +75,6 @@
       font-size: 15px;
     }
 
-    .cloud-actions {
-      margin-top: 12px;
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .cloud-upload-btn {
-      background: #22c55e;
-      color: #052e16;
-      font-weight: bold;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-
-    .cloud-upload-btn:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
-
     .container {
       display: flex;
       gap: 20px;
@@ -802,9 +782,6 @@
     <div class="title-box">
       <h1>健身紀錄日曆</h1>
       <p>Jimmy 和 Celine 的單頁健身網站｜點日期可新增或修改訓練紀錄｜<span id="syncStatus">同步：本機模式</span></p>
-      <div class="cloud-actions">
-        <button id="uploadLocalBtn" class="cloud-upload-btn" onclick="uploadLocalStorageToCloudFromUI()">把這台資料上傳到雲端（一次）</button>
-      </div>
     </div>
 
     <div class="container">
@@ -1227,28 +1204,6 @@
         console.error("上傳本機資料到 Firebase 失敗", error);
         updateSyncStatus(`同步：上傳本機資料失敗（${getFirebaseErrorMessage(error)}）`);
         return false;
-      }
-    }
-
-    async function uploadLocalStorageToCloudFromUI() {
-      const confirmed = window.confirm("要把這台裝置目前的本機資料覆蓋到雲端嗎？");
-      if (!confirmed) {
-        return;
-      }
-
-      const btn = document.getElementById("uploadLocalBtn");
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = "上傳中...";
-      }
-
-      try {
-        await uploadLocalStorageToCloudOnce();
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = "把這台資料上傳到雲端（一次）";
-        }
       }
     }
 
@@ -2248,7 +2203,6 @@
     window.removeExerciseAt = removeExerciseAt;
     window.removeProteinAt = removeProteinAt;
     window.uploadLocalStorageToCloudOnce = uploadLocalStorageToCloudOnce;
-    window.uploadLocalStorageToCloudFromUI = uploadLocalStorageToCloudFromUI;
   </script>
 </body>
 </html>
