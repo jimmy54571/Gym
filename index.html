@@ -96,6 +96,30 @@
       border-color: transparent;
     }
 
+    .sync-tools {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .sync-btn {
+      background: rgba(14, 165, 233, 0.92);
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-weight: bold;
+    }
+
+    .sync-btn:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .backup-file-input {
+      display: none;
+    }
+
     .page-panel {
       display: none;
     }
@@ -832,6 +856,10 @@
         grid-template-columns: 1fr;
       }
 
+      .sync-btn {
+        width: 100%;
+      }
+
       .day {
         min-height: 86px;
       }
@@ -878,6 +906,11 @@
       <div class="page-switch">
         <button id="btnPageCalendar" class="page-switch-btn active" onclick="switchPage('calendar')">日曆頁</button>
         <button id="btnPageHistory" class="page-switch-btn" onclick="switchPage('history')">歷史圖表頁</button>
+      </div>
+      <div class="sync-tools">
+        <button class="sync-btn" onclick="uploadLocalStorageToCloudOnce()">上傳本機資料到雲端</button>
+        <button class="sync-btn" onclick="triggerBackupImport()">匯入本機備份 JSON</button>
+        <input id="backupFileInput" class="backup-file-input" type="file" accept="application/json,.json" onchange="importLocalBackupFromFile(event)" />
       </div>
     </div>
 
@@ -1085,6 +1118,7 @@
     const FIREBASE_COLLECTION = "fitnessCalendar";
     const FIREBASE_DOC_ID = "sharedRecords";
     const BOARD_LIMIT = 20;
+    const AUTO_PULL_FROM_CLOUD_ON_BOOT = false;
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyA4LjlhkQHv20Jxmmm0myvFBD7pBNX8eF0",
       authDomain: "let-s-gym.firebaseapp.com",
@@ -1235,6 +1269,42 @@
       return hasWorkoutRecords || hasMessages;
     }
 
+    function mergeBoardItemsForCloud(localItems, cloudItems) {
+      const map = new Map();
+
+      normalizeBoardItems(cloudItems).forEach(item => {
+        const key = `${item.author || "匿名"}|${item.time || ""}|${item.text || ""}`;
+        map.set(key, item);
+      });
+
+      normalizeBoardItems(localItems).forEach(item => {
+        const key = `${item.author || "匿名"}|${item.time || ""}|${item.text || ""}`;
+        map.set(key, item);
+      });
+
+      return Array.from(map.values()).slice(-BOARD_LIMIT);
+    }
+
+    function mergeRecordsForCloud(localData, cloudData) {
+      const safeLocal = normalizeRecordsRoot(localData);
+      const safeCloud = normalizeRecordsRoot(cloudData);
+
+      return {
+        me: {
+          ...(safeCloud.me || {}),
+          ...(safeLocal.me || {}),
+        },
+        girlfriend: {
+          ...(safeCloud.girlfriend || {}),
+          ...(safeLocal.girlfriend || {}),
+        },
+        messageBoard: {
+          me: mergeBoardItemsForCloud(safeLocal.messageBoard?.me, safeCloud.messageBoard?.me),
+          girlfriend: mergeBoardItemsForCloud(safeLocal.messageBoard?.girlfriend, safeCloud.messageBoard?.girlfriend),
+        },
+      };
+    }
+
     function sanitizeRecordsForSave() {
       return normalizeRecordsRoot(records);
     }
@@ -1291,9 +1361,20 @@
         return;
       }
 
+      const dataToSave = sanitizeRecordsForSave();
+      if (!hasAnyData(dataToSave)) {
+        console.warn("本機資料為空，取消同步，避免覆蓋 Firebase");
+        updateSyncStatus("同步：本機資料為空，已取消同步以保護雲端資料");
+        return;
+      }
+
       try {
-        await setDoc(cloudDocRef, sanitizeRecordsForSave());
-        updateSyncStatus("同步：已更新到雲端");
+        const snapshot = await getDoc(cloudDocRef);
+        const cloudData = snapshot.exists() ? normalizeRecordsRoot(snapshot.data()) : createEmptyRootRecords();
+        const mergedData = mergeRecordsForCloud(dataToSave, cloudData);
+
+        await setDoc(cloudDocRef, mergedData, { merge: true });
+        updateSyncStatus("同步：已安全合併到雲端");
       } catch (error) {
         console.error("寫入 Firebase 失敗", error);
         updateSyncStatus(`同步：寫入雲端失敗（${getFirebaseErrorMessage(error)}），已保留本機`);
@@ -1327,12 +1408,16 @@
       }
 
       try {
-        await setDoc(cloudDocRef, localData);
-        records = localData;
+        const snapshot = await getDoc(cloudDocRef);
+        const cloudData = snapshot.exists() ? normalizeRecordsRoot(snapshot.data()) : createEmptyRootRecords();
+        const mergedData = mergeRecordsForCloud(localData, cloudData);
+
+        await setDoc(cloudDocRef, mergedData, { merge: true });
+        records = mergedData;
         persistLocalRecords();
         renderCalendars();
         isCloudLoaded = true;
-        updateSyncStatus("同步：已將本機資料覆蓋上傳到雲端");
+        updateSyncStatus("同步：已將本機資料安全合併上傳到雲端");
         return true;
       } catch (error) {
         console.error("上傳本機資料到 Firebase 失敗", error);
@@ -1341,10 +1426,48 @@
       }
     }
 
+    function triggerBackupImport() {
+      const input = document.getElementById("backupFileInput");
+      if (!input) {
+        return;
+      }
+
+      input.value = "";
+      input.click();
+    }
+
+    async function importLocalBackupFromFile(event) {
+      const file = event?.target?.files?.[0];
+      if (!file) {
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const importedData = normalizeRecordsRoot(JSON.parse(text));
+
+        if (!hasAnyData(importedData)) {
+          updateSyncStatus("同步：匯入檔案為空，已取消");
+          return;
+        }
+
+        records = importedData;
+        persistLocalRecords();
+        renderCalendars();
+        updateSyncStatus("同步：已匯入本機備份，請按「上傳本機資料到雲端」");
+      } catch (error) {
+        console.error("匯入本機備份失敗", error);
+        updateSyncStatus("同步：匯入本機備份失敗，請確認 JSON 格式");
+      }
+    }
+
     function persistRecords() {
       cleanupWorkoutRecords();
       persistLocalRecords();
-      syncToCloud();
+
+      if (isCloudEnabled && isCloudLoaded) {
+        updateSyncStatus("同步：已儲存到本機（未自動上傳）");
+      }
     }
 
     function formatMonthLabel(year, month) {
@@ -2542,15 +2665,16 @@
         return;
       }
 
+      if (!AUTO_PULL_FROM_CLOUD_ON_BOOT) {
+        updateSyncStatus("同步：雲端已連線（本機優先，未自動同步）");
+        return;
+      }
+
       if (hasAnyData(cloudData)) {
         records = cloudData;
         persistLocalRecords();
         renderCalendars();
         return;
-      }
-
-      if (hasAnyData(records)) {
-        await syncToCloud();
       }
     }
 
@@ -2572,6 +2696,8 @@
     window.removeExerciseAt = removeExerciseAt;
     window.removeProteinAt = removeProteinAt;
     window.uploadLocalStorageToCloudOnce = uploadLocalStorageToCloudOnce;
+    window.triggerBackupImport = triggerBackupImport;
+    window.importLocalBackupFromFile = importLocalBackupFromFile;
   </script>
 </body>
 </html>
