@@ -96,30 +96,6 @@
       border-color: transparent;
     }
 
-    .sync-tools {
-      margin-top: 12px;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .sync-btn {
-      background: rgba(14, 165, 233, 0.92);
-      color: #f8fafc;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      font-weight: bold;
-    }
-
-    .sync-btn:hover {
-      filter: brightness(1.08);
-      transform: translateY(-1px);
-    }
-
-    .backup-file-input {
-      display: none;
-    }
-
     .page-panel {
       display: none;
     }
@@ -856,10 +832,6 @@
         grid-template-columns: 1fr;
       }
 
-      .sync-btn {
-        width: 100%;
-      }
-
       .day {
         min-height: 86px;
       }
@@ -906,11 +878,6 @@
       <div class="page-switch">
         <button id="btnPageCalendar" class="page-switch-btn active" onclick="switchPage('calendar')">日曆頁</button>
         <button id="btnPageHistory" class="page-switch-btn" onclick="switchPage('history')">歷史圖表頁</button>
-      </div>
-      <div class="sync-tools">
-        <button class="sync-btn" onclick="uploadLocalStorageToCloudOnce()">上傳本機資料到雲端</button>
-        <button class="sync-btn" onclick="triggerBackupImport()">匯入本機備份 JSON</button>
-        <input id="backupFileInput" class="backup-file-input" type="file" accept="application/json,.json" onchange="importLocalBackupFromFile(event)" />
       </div>
     </div>
 
