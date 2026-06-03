@@ -1085,7 +1085,7 @@
     const FIREBASE_COLLECTION = "fitnessCalendar";
     const FIREBASE_DOC_ID = "sharedRecords";
     const BOARD_LIMIT = 20;
-    const AUTO_PULL_FROM_CLOUD_ON_BOOT = false;
+    const AUTO_PULL_FROM_CLOUD_ON_BOOT = true;
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyA4LjlhkQHv20Jxmmm0myvFBD7pBNX8eF0",
       authDomain: "let-s-gym.firebaseapp.com",
@@ -1115,7 +1115,7 @@
 
     let lockedScrollY = 0;
 
-    let records = loadLocalRecords();
+    let records = createEmptyRootRecords();
 
     function loadLocalRecords() {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -2622,27 +2622,33 @@
 
     async function bootstrap() {
       renderWeekdays();
-      renderCalendars();
       initHistoryControls();
 
       await initFirebaseSync();
+
+      if (!isCloudEnabled) {
+        records = loadLocalRecords();
+        renderCalendars();
+        return;
+      }
+
       const cloudData = await loadCloudRecords();
 
       if (!cloudData) {
+        records = loadLocalRecords();
+        renderCalendars();
         return;
       }
 
       if (!AUTO_PULL_FROM_CLOUD_ON_BOOT) {
         updateSyncStatus("同步：雲端已連線（本機優先，未自動同步）");
-        return;
-      }
-
-      if (hasAnyData(cloudData)) {
-        records = cloudData;
-        persistLocalRecords();
         renderCalendars();
         return;
       }
+
+      records = cloudData;
+      persistLocalRecords();
+      renderCalendars();
     }
 
     bootstrap();
